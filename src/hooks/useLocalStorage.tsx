@@ -1,16 +1,93 @@
 
 import { useState, useEffect } from 'react';
 
+// Service interface for type safety
+interface Service {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  provider: string;
+  rating: number;
+  distance: number;
+  image: string;
+  location: { lat: number; lng: number };
+}
+
 export function useLocalStorage<T>(key: string, initialValue: T) {
   // State to store our value
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
-      // Get from local storage by key
       const item = window.localStorage.getItem(key);
-      // Parse stored json or if none return initialValue
+      // If no item found, initialize with sample data for services
+      if (!item && key === 'mella-services') {
+        const sampleServices: Service[] = [
+          {
+            id: '1',
+            title: 'House Cleaning Service',
+            description: 'Professional house cleaning with eco-friendly products',
+            price: 500,
+            category: 'Cleaning',
+            provider: 'Sarah Tadesse',
+            rating: 4.8,
+            distance: 2.3,
+            image: '/placeholder.svg',
+            location: { lat: 9.0257, lng: 38.7468 }
+          },
+          {
+            id: '2',
+            title: 'Food Delivery',
+            description: 'Fast food delivery from local restaurants',
+            price: 50,
+            category: 'Delivery',
+            provider: 'Ahmed Hassan',
+            rating: 4.5,
+            distance: 1.8,
+            image: '/placeholder.svg',
+            location: { lat: 9.0301, lng: 38.7514 }
+          },
+          {
+            id: '3',
+            title: 'Computer Repair',
+            description: 'Laptop and desktop repair services',
+            price: 800,
+            category: 'Tech Support',
+            provider: 'Michael Bekele',
+            rating: 4.9,
+            distance: 3.1,
+            image: '/placeholder.svg',
+            location: { lat: 9.0189, lng: 38.7423 }
+          },
+          {
+            id: '4',
+            title: 'Plumbing Service',
+            description: 'Emergency plumbing and pipe repairs',
+            price: 600,
+            category: 'Home Repair',
+            provider: 'Daniel Asfaw',
+            rating: 4.6,
+            distance: 4.2,
+            image: '/placeholder.svg',
+            location: { lat: 9.0312, lng: 38.7589 }
+          },
+          {
+            id: '5',
+            title: 'Math Tutoring',
+            description: 'High school and university math tutoring',
+            price: 300,
+            category: 'Tutoring',
+            provider: 'Hanna Wolde',
+            rating: 4.7,
+            distance: 2.8,
+            image: '/placeholder.svg',
+            location: { lat: 9.0278, lng: 38.7391 }
+          }
+        ];
+        return sampleServices as T;
+      }
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      // If error also return initialValue
       console.log(error);
       return initialValue;
     }
@@ -21,96 +98,12 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     try {
       // Allow value to be a function so we have the same API as useState
       const valueToStore = value instanceof Function ? value(storedValue) : value;
-      // Save state
       setStoredValue(valueToStore);
-      // Save to local storage
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
-      // A more advanced implementation would handle the error case
       console.log(error);
     }
   };
-
-  // Initialize with some demo data if empty
-  useEffect(() => {
-    if (key === 'mella-services' && (!storedValue || storedValue.length === 0)) {
-      const demoServices = [
-        {
-          id: '1',
-          title: 'Professional House Cleaning',
-          description: 'Deep cleaning service for homes and apartments. Includes all rooms, kitchen, and bathrooms.',
-          price: 500,
-          category: 'Cleaning',
-          provider: 'Almaz Cleaning Services',
-          rating: 4.8,
-          distance: 2.3,
-          image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=300&fit=crop',
-          location: { lat: 9.0245, lng: 38.7469 }
-        },
-        {
-          id: '2',
-          title: 'Food Delivery Service',
-          description: 'Fast and reliable food delivery from local restaurants. Hot meals delivered to your door.',
-          price: 50,
-          category: 'Delivery',
-          provider: 'FastEats Delivery',
-          rating: 4.6,
-          distance: 1.8,
-          image: 'https://images.unsplash.com/photo-1586816001966-79b736744398?w=400&h=300&fit=crop',
-          location: { lat: 9.0200, lng: 38.7500 }
-        },
-        {
-          id: '3',
-          title: 'Computer Repair & Setup',
-          description: 'Expert computer repair, software installation, and tech support services.',
-          price: 800,
-          category: 'Tech Support',
-          provider: 'TechFix Ethiopia',
-          rating: 4.9,
-          distance: 3.5,
-          image: 'https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=400&h=300&fit=crop',
-          location: { lat: 9.0300, lng: 38.7400 }
-        },
-        {
-          id: '4',
-          title: 'Home Appliance Repair',
-          description: 'Repair and maintenance for washing machines, refrigerators, and other home appliances.',
-          price: 400,
-          category: 'Home Repair',
-          provider: 'FixIt Home Services',
-          rating: 4.7,
-          distance: 4.2,
-          image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=300&fit=crop',
-          location: { lat: 9.0150, lng: 38.7550 }
-        },
-        {
-          id: '5',
-          title: 'English Tutoring',
-          description: 'One-on-one English tutoring for students of all ages. Improve your speaking and writing skills.',
-          price: 300,
-          category: 'Tutoring',
-          provider: 'Helen Language Center',
-          rating: 4.9,
-          distance: 1.5,
-          image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop',
-          location: { lat: 9.0280, lng: 38.7480 }
-        },
-        {
-          id: '6',
-          title: 'Event Photography',
-          description: 'Professional photography services for weddings, birthdays, and corporate events.',
-          price: 2000,
-          category: 'Photography',
-          provider: 'Capture Moments Studio',
-          rating: 4.8,
-          distance: 6.7,
-          image: 'https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=400&h=300&fit=crop',
-          location: { lat: 9.0350, lng: 38.7350 }
-        }
-      ];
-      setValue(demoServices);
-    }
-  }, [key, storedValue, setValue]);
 
   return [storedValue, setValue] as const;
 }
