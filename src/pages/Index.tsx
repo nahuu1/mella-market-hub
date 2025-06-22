@@ -49,8 +49,8 @@ const Index = () => {
     description: ad.description,
     price: ad.price,
     category: ad.category,
-    provider: 'Ad Poster', // We can enhance this later with profile data
-    rating: 4.5 + Math.random() * 0.5,
+    provider: (ad as any).profiles?.full_name || 'Service Provider',
+    rating: (ad as any).profiles?.rating || 4.5 + Math.random() * 0.5,
     distance: ad.location_lat && ad.location_lng ? 
       Math.sqrt(
         Math.pow(ad.location_lat - userLocation.lat, 2) + 
@@ -61,7 +61,8 @@ const Index = () => {
     location: { 
       lat: ad.location_lat || userLocation.lat, 
       lng: ad.location_lng || userLocation.lng 
-    }
+    },
+    workerId: ad.user_id // Add worker ID for booking
   }));
 
   const filteredServices = services.filter(service => {
@@ -172,12 +173,20 @@ const Index = () => {
           <div className="text-center py-16">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Worker Dashboard</h2>
             <p className="text-gray-600 mb-8">Manage your ads and services from here</p>
-            <button
-              onClick={() => setShowAdForm(true)}
-              className="bg-orange-500 text-white px-8 py-4 rounded-lg hover:bg-orange-600 transition-colors font-medium text-lg"
-            >
-              Post Your First Ad
-            </button>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setShowAdForm(true)}
+                className="bg-orange-500 text-white px-8 py-4 rounded-lg hover:bg-orange-600 transition-colors font-medium text-lg"
+              >
+                Post Your First Ad
+              </button>
+              <button
+                onClick={() => navigate('/profile')}
+                className="bg-gray-500 text-white px-8 py-4 rounded-lg hover:bg-gray-600 transition-colors font-medium text-lg"
+              >
+                View Profile
+              </button>
+            </div>
           </div>
         )}
 

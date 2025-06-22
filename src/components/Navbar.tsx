@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { User, Briefcase, Plus, LogIn, LogOut } from 'lucide-react';
+import { User, Briefcase, Plus, LogIn, LogOut, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface NavbarProps {
   isWorkerMode: boolean;
@@ -17,6 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount } = useNotifications();
 
   const handleAuthAction = () => {
     if (user) {
@@ -31,9 +33,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">
+            <button 
+              onClick={() => navigate('/')}
+              className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+            >
               Mella
-            </h1>
+            </button>
             <span className="text-sm text-gray-600 hidden sm:block">
               Ethiopian Marketplace
             </span>
@@ -79,9 +84,35 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
+            {/* Notifications - only show if user is authenticated */}
+            {user && (
+              <button
+                onClick={() => navigate('/notifications')}
+                className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Profile button - only show if user is authenticated */}
+            {user && (
+              <button
+                onClick={() => navigate('/profile')}
+                className="flex items-center gap-2 text-gray-600 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+              >
+                <User size={16} />
+                <span className="hidden sm:inline">Profile</span>
+              </button>
+            )}
+
             {/* User info and Auth Button */}
             {user && (
-              <span className="text-sm text-gray-600 hidden sm:block">
+              <span className="text-sm text-gray-600 hidden md:block">
                 Welcome, {user.email}
               </span>
             )}

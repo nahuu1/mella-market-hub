@@ -13,6 +13,7 @@ interface Service {
   distance: number;
   image: string;
   location: { lat: number; lng: number };
+  workerId?: string;
 }
 
 interface ServiceGridProps {

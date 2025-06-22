@@ -24,7 +24,13 @@ export const useAds = () => {
     try {
       const { data, error } = await supabase
         .from('ads')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            rating
+          )
+        `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 

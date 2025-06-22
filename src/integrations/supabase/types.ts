@@ -54,29 +54,157 @@ export type Database = {
         }
         Relationships: []
       }
+      bookings: {
+        Row: {
+          ad_id: string
+          booking_date: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          message: string | null
+          service_date: string | null
+          status: string | null
+          worker_id: string
+        }
+        Insert: {
+          ad_id: string
+          booking_date?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          message?: string | null
+          service_date?: string | null
+          status?: string | null
+          worker_id: string
+        }
+        Update: {
+          ad_id?: string
+          booking_date?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          message?: string | null
+          service_date?: string | null
+          status?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      certifications: {
+        Row: {
+          certificate_image_url: string | null
+          created_at: string | null
+          description: string | null
+          expiry_date: string | null
+          id: string
+          institution: string | null
+          issue_date: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          certificate_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          institution?: string | null
+          issue_date?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          certificate_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          institution?: string | null
+          issue_date?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string
+          phone_number: string | null
+          profile_image_url: string | null
+          rating: number | null
+          total_ratings: number | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id: string
+          phone_number?: string | null
+          profile_image_url?: string | null
+          rating?: number | null
+          total_ratings?: number | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          phone_number?: string | null
+          profile_image_url?: string | null
+          rating?: number | null
+          total_ratings?: number | null
           updated_at?: string | null
         }
         Relationships: []
