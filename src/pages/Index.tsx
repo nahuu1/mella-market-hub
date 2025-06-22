@@ -7,9 +7,11 @@ import { MapView } from '@/components/MapView';
 import { AdForm } from '@/components/AdForm';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { DistanceFilter } from '@/components/DistanceFilter';
+import { Footer } from '@/components/Footer';
+import { EmergencyNavigation } from '@/components/EmergencyNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAds } from '@/hooks/useAds';
-import { MapPin, List } from 'lucide-react';
+import { MapPin, List, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
@@ -18,6 +20,7 @@ const Index = () => {
   const [isWorkerMode, setIsWorkerMode] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showAdForm, setShowAdForm] = useState(false);
+  const [showEmergencyNav, setShowEmergencyNav] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [distanceFilter, setDistanceFilter] = useState(10);
@@ -94,7 +97,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col">
       <Navbar 
         isWorkerMode={isWorkerMode}
         onToggleMode={() => setIsWorkerMode(!isWorkerMode)}
@@ -107,10 +110,19 @@ const Index = () => {
         isWorkerMode={isWorkerMode}
       />
 
-      <div className="container mx-auto px-4 py-8">
+      {/* Emergency Button - Fixed position for mobile */}
+      <button
+        onClick={() => setShowEmergencyNav(true)}
+        className="fixed bottom-6 right-6 bg-red-500 text-white p-4 rounded-full shadow-lg hover:bg-red-600 transition-colors z-40 flex items-center gap-2"
+      >
+        <AlertTriangle size={24} />
+        <span className="hidden sm:inline font-medium">Emergency</span>
+      </button>
+
+      <div className="container mx-auto px-4 py-4 sm:py-8 flex-1">
         {!isWorkerMode && (
           <>
-            <div className="flex flex-col lg:flex-row gap-6 mb-8">
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 mb-6 sm:mb-8">
               <div className="flex flex-col sm:flex-row gap-4 flex-1">
                 <CategoryFilter 
                   selectedCategory={selectedCategory}
@@ -125,25 +137,27 @@ const Index = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowMap(false)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm sm:text-base ${
                     !showMap 
                       ? 'bg-orange-500 text-white shadow-lg' 
                       : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <List size={20} />
-                  List View
+                  <List size={16} sm:size={20} />
+                  <span className="hidden sm:inline">List View</span>
+                  <span className="sm:hidden">List</span>
                 </button>
                 <button
                   onClick={() => setShowMap(true)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm sm:text-base ${
                     showMap 
                       ? 'bg-orange-500 text-white shadow-lg' 
                       : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <MapPin size={20} />
-                  Map View
+                  <MapPin size={16} sm:size={20} />
+                  <span className="hidden sm:inline">Map View</span>
+                  <span className="sm:hidden">Map</span>
                 </button>
               </div>
             </div>
@@ -170,19 +184,19 @@ const Index = () => {
         )}
 
         {isWorkerMode && user && (
-          <div className="text-center py-16">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Worker Dashboard</h2>
-            <p className="text-gray-600 mb-8">Manage your ads and services from here</p>
-            <div className="flex gap-4 justify-center">
+          <div className="text-center py-8 sm:py-16">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Worker Dashboard</h2>
+            <p className="text-gray-600 mb-6 sm:mb-8 px-4">Manage your ads and services from here</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
               <button
                 onClick={() => setShowAdForm(true)}
-                className="bg-orange-500 text-white px-8 py-4 rounded-lg hover:bg-orange-600 transition-colors font-medium text-lg"
+                className="bg-orange-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-orange-600 transition-colors font-medium text-base sm:text-lg"
               >
                 Post Your First Ad
               </button>
               <button
                 onClick={() => navigate('/profile')}
-                className="bg-gray-500 text-white px-8 py-4 rounded-lg hover:bg-gray-600 transition-colors font-medium text-lg"
+                className="bg-gray-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-gray-600 transition-colors font-medium text-base sm:text-lg"
               >
                 View Profile
               </button>
@@ -191,12 +205,12 @@ const Index = () => {
         )}
 
         {isWorkerMode && !user && (
-          <div className="text-center py-16">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Sign in Required</h2>
-            <p className="text-gray-600 mb-8">Please sign in to access the worker dashboard</p>
+          <div className="text-center py-8 sm:py-16">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Sign in Required</h2>
+            <p className="text-gray-600 mb-6 sm:mb-8 px-4">Please sign in to access the worker dashboard</p>
             <button
               onClick={() => navigate('/auth')}
-              className="bg-orange-500 text-white px-8 py-4 rounded-lg hover:bg-orange-600 transition-colors font-medium text-lg"
+              className="bg-orange-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-orange-600 transition-colors font-medium text-base sm:text-lg"
             >
               Sign In
             </button>
@@ -204,11 +218,20 @@ const Index = () => {
         )}
       </div>
 
+      <Footer />
+
       {showAdForm && (
         <AdForm 
           onClose={() => setShowAdForm(false)}
           userLocation={userLocation}
           onAdAdded={addAd}
+        />
+      )}
+
+      {showEmergencyNav && (
+        <EmergencyNavigation 
+          userLocation={userLocation}
+          onClose={() => setShowEmergencyNav(false)}
         />
       )}
     </div>

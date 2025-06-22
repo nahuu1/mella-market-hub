@@ -110,12 +110,21 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Initialize map
-    map.current = L.map(mapContainer.current).setView([userLocation.lat, userLocation.lng], 13);
+    // Initialize map with mobile-friendly settings
+    map.current = L.map(mapContainer.current, {
+      zoomControl: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      touchZoom: true,
+      dragging: true,
+      tap: true,
+      tapTolerance: 15
+    }).setView([userLocation.lat, userLocation.lng], 13);
 
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
     }).addTo(map.current);
 
     // Create markers group
@@ -218,28 +227,28 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
 
   return (
     <div className="relative">
-      <div className="h-[600px] w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
+      <div className="h-[400px] sm:h-[600px] w-full rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl border-2 sm:border-4 border-white">
         <div ref={mapContainer} className="h-full w-full" />
       </div>
       
-      {/* Emergency Stations List */}
-      <div className="mt-6 bg-white rounded-2xl shadow-lg p-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+      {/* Emergency Stations List - Mobile Responsive */}
+      <div className="mt-4 sm:mt-6 bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
           🆘 Emergency Contacts
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {emergencyLocations.map((location, index) => (
-            <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">{location.icon}</span>
-                <div>
-                  <h4 className="font-semibold text-gray-800">{location.name}</h4>
-                  <p className="text-sm text-gray-600">{location.type}</p>
+            <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <span className="text-lg sm:text-xl">{location.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{location.name}</h4>
+                  <p className="text-xs sm:text-sm text-gray-600">{location.type}</p>
                 </div>
               </div>
               <button
                 onClick={() => handleEmergencyCall(location.phone)}
-                className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                className="w-full bg-red-600 text-white py-2 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base font-medium btn-touch"
               >
                 📞 {location.phone}
               </button>
