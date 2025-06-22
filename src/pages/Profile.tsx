@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { User, Star, MapPin, Edit, Plus, Award, Phone, Mail } from 'lucide-react';
+import { User, Star, MapPin, Edit, Plus, Award, Phone, Mail, Home, Upload, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
@@ -46,6 +46,7 @@ const Profile = () => {
   const [userAds, setUserAds] = useState<UserAd[]>([]);
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('ads');
 
   useEffect(() => {
@@ -105,6 +106,58 @@ const Profile = () => {
     }
   };
 
+  const uploadProfileImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      
+      if (!event.target.files || event.target.files.length === 0) {
+        throw new Error('You must select an image to upload.');
+      }
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}.${fileExt}`;
+      const filePath = `profile-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_image_url: publicUrl })
+        .eq('id', user?.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      setProfile(prev => prev ? { ...prev, profile_image_url: publicUrl } : null);
+      
+      toast({
+        title: "Success",
+        description: "Profile image updated successfully!",
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload profile image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (!user) {
     return null;
   }
@@ -122,6 +175,23 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
+      {/* Header */}
+      <header className="bg-white shadow-lg border-b-4 border-orange-400">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 text-orange-600 hover:bg-orange-50 px-3 py-2 rounded-lg transition-colors"
+            >
+              <Home size={20} />
+              <span className="font-medium">Home</span>
+            </button>
+            <h1 className="text-xl font-bold text-gray-800">My Profile</h1>
+            <div className="w-20"></div> {/* Spacer for centered title */}
+          </div>
+        </div>
+      </header>
+
       <div className="container mx-auto px-4 py-8">
         {/* Profile Header */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
@@ -138,9 +208,22 @@ const Profile = () => {
                   <User size={48} className="text-orange-500" />
                 </div>
               )}
-              <button className="absolute bottom-0 right-0 bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 transition-colors">
-                <Edit size={16} />
-              </button>
+              
+              {/* Upload Button */}
+              <label className="absolute bottom-0 right-0 bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 transition-colors cursor-pointer">
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Camera size={16} />
+                )}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={uploadProfileImage}
+                  disabled={uploading}
+                />
+              </label>
             </div>
 
             <div className="flex-1">

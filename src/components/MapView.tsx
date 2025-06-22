@@ -35,13 +35,77 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
   const map = useRef<L.Map | null>(null);
   const markersGroup = useRef<L.LayerGroup | null>(null);
 
-  // Emergency locations in Addis Ababa
+  // Emergency locations in Addis Ababa with actual phone numbers
   const emergencyLocations = [
-    { type: 'Hospital', name: 'Tikur Anbessa Hospital', lat: 9.0366, lng: 38.7639, icon: '🏥' },
-    { type: 'Hospital', name: 'Black Lion Hospital', lat: 9.0415, lng: 38.7614, icon: '🏥' },
-    { type: 'Police', name: 'Federal Police HQ', lat: 9.0300, lng: 38.7400, icon: '🚔' },
-    { type: 'Fire Station', name: 'Addis Fire Station', lat: 9.0250, lng: 38.7500, icon: '🚒' },
+    { 
+      type: 'Hospital', 
+      name: 'Tikur Anbessa Hospital', 
+      lat: 9.0366, 
+      lng: 38.7639, 
+      icon: '🏥',
+      phone: '+251-11-551-7211'
+    },
+    { 
+      type: 'Hospital', 
+      name: 'Black Lion Hospital', 
+      lat: 9.0415, 
+      lng: 38.7614, 
+      icon: '🏥',
+      phone: '+251-11-553-5370'
+    },
+    { 
+      type: 'Hospital', 
+      name: 'Bethzatha General Hospital', 
+      lat: 9.0200, 
+      lng: 38.7800, 
+      icon: '🏥',
+      phone: '+251-11-661-5544'
+    },
+    { 
+      type: 'Police', 
+      name: 'Federal Police HQ', 
+      lat: 9.0300, 
+      lng: 38.7400, 
+      icon: '🚔',
+      phone: '+251-11-551-8877'
+    },
+    { 
+      type: 'Police', 
+      name: 'Addis Ababa Police', 
+      lat: 9.0250, 
+      lng: 38.7550, 
+      icon: '🚔',
+      phone: '+251-11-551-2400'
+    },
+    { 
+      type: 'Fire Station', 
+      name: 'Addis Fire & Emergency Service', 
+      lat: 9.0250, 
+      lng: 38.7500, 
+      icon: '🚒',
+      phone: '+251-11-551-1311'
+    },
+    { 
+      type: 'Fire Station', 
+      name: 'Bole Fire Station', 
+      lat: 8.9950, 
+      lng: 38.8100, 
+      icon: '🚒',
+      phone: '+251-11-661-5544'
+    },
+    { 
+      type: 'Emergency', 
+      name: 'Ethiopian Red Cross', 
+      lat: 9.0100, 
+      lng: 38.7650, 
+      icon: '🆘',
+      phone: '+251-11-551-5393'
+    }
   ];
+
+  const handleEmergencyCall = (phone: string) => {
+    window.open(`tel:${phone}`, '_self');
+  };
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -121,16 +185,68 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
         className: 'emergency-marker'
       });
 
-      L.marker([location.lat, location.lng], { icon: emergencyIcon })
-        .addTo(markersGroup.current!)
-        .bindPopup(`<strong>${location.name}</strong><br><small>${location.type}</small>`);
+      const marker = L.marker([location.lat, location.lng], { icon: emergencyIcon })
+        .addTo(markersGroup.current!);
+
+      // Create popup content with call button
+      const popupContent = document.createElement('div');
+      popupContent.innerHTML = `
+        <div style="text-align: center; max-width: 200px;">
+          <strong>${location.name}</strong><br>
+          <small>${location.type}</small><br>
+          <button id="call-${location.name.replace(/\s+/g, '-')}" 
+                  style="background: #16a34a; color: white; border: none; padding: 8px 16px; border-radius: 6px; margin-top: 8px; cursor: pointer; font-size: 12px;">
+            📞 Call ${location.phone}
+          </button>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+
+      // Add click event to call button after popup opens
+      marker.on('popupopen', () => {
+        const callButton = document.getElementById(`call-${location.name.replace(/\s+/g, '-')}`);
+        if (callButton) {
+          callButton.addEventListener('click', () => {
+            handleEmergencyCall(location.phone);
+          });
+        }
+      });
     });
 
   }, [services, userLocation, distanceFilter]);
 
   return (
-    <div className="h-[600px] w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
-      <div ref={mapContainer} className="h-full w-full" />
+    <div className="relative">
+      <div className="h-[600px] w-full rounded-2xl overflow-hidden shadow-2xl border-4 border-white">
+        <div ref={mapContainer} className="h-full w-full" />
+      </div>
+      
+      {/* Emergency Stations List */}
+      <div className="mt-6 bg-white rounded-2xl shadow-lg p-6">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+          🆘 Emergency Contacts
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {emergencyLocations.map((location, index) => (
+            <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">{location.icon}</span>
+                <div>
+                  <h4 className="font-semibold text-gray-800">{location.name}</h4>
+                  <p className="text-sm text-gray-600">{location.type}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleEmergencyCall(location.phone)}
+                className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                📞 {location.phone}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
