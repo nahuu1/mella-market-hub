@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -117,7 +116,6 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
       doubleClickZoom: true,
       touchZoom: true,
       dragging: true,
-      tap: true,
       tapTolerance: 15
     }).setView([userLocation.lat, userLocation.lng], 13);
 

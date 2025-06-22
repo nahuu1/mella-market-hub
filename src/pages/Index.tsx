@@ -143,7 +143,7 @@ const Index = () => {
                       : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <List size={16} sm:size={20} />
+                  <List size={20} />
                   <span className="hidden sm:inline">List View</span>
                   <span className="sm:hidden">List</span>
                 </button>
@@ -155,7 +155,7 @@ const Index = () => {
                       : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <MapPin size={16} sm:size={20} />
+                  <MapPin size={20} />
                   <span className="hidden sm:inline">Map View</span>
                   <span className="sm:hidden">Map</span>
                 </button>
