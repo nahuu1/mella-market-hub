@@ -29,14 +29,14 @@ const Messages = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
       {/* Header */}
-      <header className="bg-white shadow-lg border-b-4 border-orange-400">
+      <header className="bg-white shadow-lg border-b-4 border-green-600">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-orange-600 hover:bg-orange-50 px-3 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 text-green-700 hover:bg-green-50 px-3 py-2 rounded-lg transition-colors"
             >
               <Home size={20} />
               <span className="font-medium">Home</span>

@@ -14,7 +14,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
   isWorkerMode
 }) => {
   return (
-    <div className="bg-gradient-to-r from-orange-500 via-yellow-500 to-red-500 text-white">
+    <div className="bg-gradient-to-r from-green-600 via-green-500 to-emerald-600 text-white">
       <div className="container mx-auto px-4 py-16">
         <div className="text-center max-w-4xl mx-auto">
           {isWorkerMode ? (
@@ -54,7 +54,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
                     placeholder="Search for services, products, or providers..."
                     className="w-full px-6 py-4 pr-14 text-gray-900 rounded-2xl shadow-xl border-0 focus:ring-4 focus:ring-white/30 focus:outline-none text-lg"
                   />
-                  <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-500 p-3 rounded-xl hover:bg-orange-600 transition-colors">
+                  <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-green-600 p-3 rounded-xl hover:bg-green-700 transition-colors">
                     <Search size={20} className="text-white" />
                   </button>
                 </div>

@@ -31,7 +31,7 @@ export const useRealTimeAds = () => {
         .from('ads')
         .select(`
           *,
-          profiles!ads_user_id_fkey (
+          profiles (
             full_name,
             rating,
             profile_image_url
@@ -94,7 +94,7 @@ export const useRealTimeAds = () => {
         .from('ads')
         .select(`
           *,
-          profiles!ads_user_id_fkey (
+          profiles (
             full_name,
             rating,
             profile_image_url

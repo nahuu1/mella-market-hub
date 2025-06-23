@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { SearchHero } from '@/components/SearchHero';
@@ -126,7 +125,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
       <Navbar />
       
       {!selectedMessageUser && (
@@ -185,7 +184,7 @@ const Index = () => {
                       onClick={() => setViewMode('list')}
                       className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
                         viewMode === 'list'
-                          ? 'bg-orange-500 text-white'
+                          ? 'bg-green-600 text-white'
                           : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                       }`}
                     >
@@ -197,7 +196,7 @@ const Index = () => {
                       onClick={() => setViewMode('map')}
                       className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
                         viewMode === 'map'
-                          ? 'bg-orange-500 text-white'
+                          ? 'bg-green-600 text-white'
                           : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                       }`}
                     >
@@ -210,7 +209,7 @@ const Index = () => {
 
                 {loading ? (
                   <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600 mx-auto"></div>
                     <p className="mt-4 text-gray-600">Loading services...</p>
                   </div>
                 ) : (
