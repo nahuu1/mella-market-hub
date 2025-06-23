@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -158,15 +157,19 @@ const Profile = () => {
     }
   };
 
+  const handleAddCertification = () => {
+    navigate('/add-certification');
+  };
+
   if (!user) {
     return null;
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading profile...</p>
         </div>
       </div>
@@ -174,20 +177,20 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
       {/* Header */}
-      <header className="bg-white shadow-lg border-b-4 border-orange-400">
+      <header className="bg-white shadow-lg border-b-4 border-green-600">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-orange-600 hover:bg-orange-50 px-3 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 text-green-600 hover:bg-green-50 px-3 py-2 rounded-lg transition-colors"
             >
               <Home size={20} />
               <span className="font-medium">Home</span>
             </button>
             <h1 className="text-xl font-bold text-gray-800">My Profile</h1>
-            <div className="w-20"></div> {/* Spacer for centered title */}
+            <div className="w-20"></div>
           </div>
         </div>
       </header>
@@ -201,16 +204,16 @@ const Profile = () => {
                 <img
                   src={profile.profile_image_url}
                   alt="Profile"
-                  className="w-32 h-32 rounded-full object-cover border-4 border-orange-200"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-green-200"
                 />
               ) : (
-                <div className="w-32 h-32 rounded-full bg-orange-100 flex items-center justify-center border-4 border-orange-200">
-                  <User size={48} className="text-orange-500" />
+                <div className="w-32 h-32 rounded-full bg-green-100 flex items-center justify-center border-4 border-green-200">
+                  <User size={48} className="text-green-600" />
                 </div>
               )}
               
               {/* Upload Button */}
-              <label className="absolute bottom-0 right-0 bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 transition-colors cursor-pointer">
+              <label className="absolute bottom-0 right-0 bg-green-600 text-white p-2 rounded-full hover:bg-green-700 transition-colors cursor-pointer">
                 {uploading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
@@ -271,7 +274,7 @@ const Profile = () => {
                 onClick={() => setActiveTab('ads')}
                 className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
                   activeTab === 'ads'
-                    ? 'bg-orange-500 text-white'
+                    ? 'bg-green-600 text-white'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -281,7 +284,7 @@ const Profile = () => {
                 onClick={() => setActiveTab('certifications')}
                 className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
                   activeTab === 'certifications'
-                    ? 'bg-orange-500 text-white'
+                    ? 'bg-green-600 text-white'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -297,7 +300,7 @@ const Profile = () => {
                   <h2 className="text-xl font-bold text-gray-800">My Ads</h2>
                   <button
                     onClick={() => navigate('/')}
-                    className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
                     <Plus size={16} />
                     Post New Ad
@@ -331,7 +334,7 @@ const Profile = () => {
                         </div>
                         <p className="text-sm text-gray-600 mb-2">{ad.description}</p>
                         <div className="flex justify-between items-center">
-                          <span className="font-bold text-orange-600">ETB {ad.price}</span>
+                          <span className="font-bold text-green-600">ETB {ad.price}</span>
                           <span className="text-xs text-gray-500">{ad.category}</span>
                         </div>
                       </div>
@@ -345,7 +348,10 @@ const Profile = () => {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-800">Certifications</h2>
-                  <button className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2">
+                  <button 
+                    onClick={handleAddCertification}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
                     <Plus size={16} />
                     Add Certification
                   </button>
