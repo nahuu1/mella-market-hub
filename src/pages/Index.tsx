@@ -50,6 +50,7 @@ const Index = () => {
   } | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // User location for Addis Ababa
   const userLocation = { lat: 9.0320, lng: 38.7469 };
@@ -130,7 +131,11 @@ const Index = () => {
       
       {!selectedMessageUser && (
         <>
-          <SearchHero />
+          <SearchHero 
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            isWorkerMode={false}
+          />
           
           <div className="container mx-auto px-4 py-8">
             <SearchBar 
@@ -161,7 +166,7 @@ const Index = () => {
                   onCategoryChange={setSelectedCategory}
                 />
                 <DistanceFilter
-                  distance={distanceFilter}
+                  distanceFilter={distanceFilter}
                   onDistanceChange={setDistanceFilter}
                 />
               </div>
@@ -247,6 +252,7 @@ const Index = () => {
       {selectedService && (
         <BookingModal
           service={selectedService}
+          workerId={selectedService.user_id}
           onClose={handleCloseBooking}
         />
       )}

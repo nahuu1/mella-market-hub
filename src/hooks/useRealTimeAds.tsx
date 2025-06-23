@@ -18,7 +18,7 @@ interface Ad {
     full_name: string;
     rating: number;
     profile_image_url: string;
-  };
+  } | null;
 }
 
 export const useRealTimeAds = () => {
@@ -31,7 +31,7 @@ export const useRealTimeAds = () => {
         .from('ads')
         .select(`
           *,
-          profiles:user_id (
+          profiles!ads_user_id_fkey (
             full_name,
             rating,
             profile_image_url
@@ -45,7 +45,17 @@ export const useRealTimeAds = () => {
         return;
       }
 
-      setAds(data || []);
+      // Transform the data to match our Ad interface
+      const transformedAds = (data || []).map(ad => ({
+        ...ad,
+        profiles: ad.profiles ? {
+          full_name: ad.profiles.full_name || '',
+          rating: ad.profiles.rating || 0,
+          profile_image_url: ad.profiles.profile_image_url || ''
+        } : null
+      }));
+
+      setAds(transformedAds);
     } catch (error) {
       console.error('Error fetching ads:', error);
     } finally {
@@ -84,7 +94,7 @@ export const useRealTimeAds = () => {
         .from('ads')
         .select(`
           *,
-          profiles:user_id (
+          profiles!ads_user_id_fkey (
             full_name,
             rating,
             profile_image_url
@@ -105,9 +115,19 @@ export const useRealTimeAds = () => {
 
       let filteredData = data || [];
 
+      // Transform the data to match our Ad interface
+      const transformedAds = filteredData.map(ad => ({
+        ...ad,
+        profiles: ad.profiles ? {
+          full_name: ad.profiles.full_name || '',
+          rating: ad.profiles.rating || 0,
+          profile_image_url: ad.profiles.profile_image_url || ''
+        } : null
+      }));
+
       // Filter by location if provided
-      if (location && radius && filteredData.length > 0) {
-        filteredData = filteredData.filter(ad => {
+      if (location && radius && transformedAds.length > 0) {
+        return transformedAds.filter(ad => {
           if (!ad.location_lat || !ad.location_lng) return false;
           
           const distance = calculateDistance(
@@ -121,7 +141,7 @@ export const useRealTimeAds = () => {
         });
       }
 
-      return filteredData;
+      return transformedAds;
     } catch (error) {
       console.error('Error searching ads:', error);
       return [];
