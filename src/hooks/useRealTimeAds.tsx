@@ -48,7 +48,7 @@ export const useRealTimeAds = () => {
       // Transform the data to match our Ad interface
       const transformedAds = (data || []).map(ad => ({
         ...ad,
-        profiles: ad.profiles ? {
+        profiles: ad.profiles && typeof ad.profiles === 'object' && 'full_name' in ad.profiles ? {
           full_name: ad.profiles.full_name || '',
           rating: ad.profiles.rating || 0,
           profile_image_url: ad.profiles.profile_image_url || ''
@@ -118,7 +118,7 @@ export const useRealTimeAds = () => {
       // Transform the data to match our Ad interface
       const transformedAds = filteredData.map(ad => ({
         ...ad,
-        profiles: ad.profiles ? {
+        profiles: ad.profiles && typeof ad.profiles === 'object' && 'full_name' in ad.profiles ? {
           full_name: ad.profiles.full_name || '',
           rating: ad.profiles.rating || 0,
           profile_image_url: ad.profiles.profile_image_url || ''
