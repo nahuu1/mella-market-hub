@@ -13,30 +13,46 @@ interface Service {
   distance: number;
   image: string;
   location: { lat: number; lng: number };
-  workerId?: string;
+  user_id: string;
+  profiles?: {
+    full_name: string;
+    rating: number;
+    profile_image_url: string;
+  };
 }
 
 interface ServiceGridProps {
   services: Service[];
+  onBook?: (service: Service) => void;
+  onMessage?: (userId: string, userName: string, userImage?: string) => void;
 }
 
-export const ServiceGrid: React.FC<ServiceGridProps> = ({ services }) => {
+export const ServiceGrid: React.FC<ServiceGridProps> = ({ services, onBook, onMessage }) => {
   if (services.length === 0) {
     return (
-      <div className="text-center py-16">
-        <div className="bg-white rounded-2xl shadow-lg p-12 max-w-md mx-auto">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">No services found</h3>
-          <p className="text-gray-600">Try adjusting your search criteria or distance filter</p>
-        </div>
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">🔍</div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">No services found</h3>
+        <p className="text-gray-600">Try adjusting your filters or search terms</p>
       </div>
     );
   }
 
+  const handleMessage = (userId: string, userName: string) => {
+    const service = services.find(s => s.user_id === userId);
+    const userImage = service?.profiles?.profile_image_url;
+    onMessage?.(userId, userName, userImage);
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {services.map((service) => (
-        <ServiceCard key={service.id} service={service} />
+        <ServiceCard
+          key={service.id}
+          service={service}
+          onBook={onBook}
+          onMessage={handleMessage}
+        />
       ))}
     </div>
   );

@@ -2,238 +2,256 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { SearchHero } from '@/components/SearchHero';
-import { ServiceGrid } from '@/components/ServiceGrid';
-import { MapView } from '@/components/MapView';
-import { AdForm } from '@/components/AdForm';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { DistanceFilter } from '@/components/DistanceFilter';
+import { ServiceGrid } from '@/components/ServiceGrid';
+import { MapView } from '@/components/MapView';
+import { SearchBar } from '@/components/SearchBar';
+import { BookingModal } from '@/components/BookingModal';
+import { MessageThread } from '@/components/MessageThread';
 import { Footer } from '@/components/Footer';
-import { EmergencyNavigation } from '@/components/EmergencyNavigation';
+import { useRealTimeAds } from '@/hooks/useRealTimeAds';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { List, MapPin } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAds } from '@/hooks/useAds';
-import { MapPin, List, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+interface Service {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  provider: string;
+  rating: number;
+  distance: number;
+  image: string;
+  location: { lat: number; lng: number };
+  user_id: string;
+  profiles?: {
+    full_name: string;
+    rating: number;
+    profile_image_url: string;
+  };
+}
+
 const Index = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [isWorkerMode, setIsWorkerMode] = useState(false);
-  const [showMap, setShowMap] = useState(false);
-  const [showAdForm, setShowAdForm] = useState(false);
-  const [showEmergencyNav, setShowEmergencyNav] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [distanceFilter, setDistanceFilter] = useState(10);
-  const [userLocation, setUserLocation] = useState({ lat: 9.0245, lng: 38.7469 }); // Addis Ababa default
+  const { ads, loading, searchAds } = useRealTimeAds();
+  const [selectedCategory, setSelectedCategory] = useLocalStorage('selectedCategory', 'all');
+  const [distanceFilter, setDistanceFilter] = useLocalStorage('distanceFilter', 25);
+  const [viewMode, setViewMode] = useLocalStorage('viewMode', 'list');
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedMessageUser, setSelectedMessageUser] = useState<{
+    id: string;
+    name: string;
+    image?: string;
+  } | null>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // User location for Addis Ababa
+  const userLocation = { lat: 9.0320, lng: 38.7469 };
 
-  const { ads, loading: adsLoading, addAd } = useAds();
-
-  useEffect(() => {
-    // Get user's location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.log('Location access denied, using Addis Ababa as default');
-        }
-      );
-    }
-  }, []);
-
-  // Convert ads to service format for existing components
-  const services = ads.map(ad => ({
-    id: ad.id,
-    title: ad.title,
-    description: ad.description,
-    price: ad.price,
-    category: ad.category,
-    provider: (ad as any).profiles?.full_name || 'Service Provider',
-    rating: (ad as any).profiles?.rating || 4.5 + Math.random() * 0.5,
-    distance: ad.location_lat && ad.location_lng ? 
-      Math.sqrt(
-        Math.pow(ad.location_lat - userLocation.lat, 2) + 
-        Math.pow(ad.location_lng - userLocation.lng, 2)
-      ) * 111 : // Rough km conversion
-      Math.random() * 8 + 1,
-    image: ad.image_url || `https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=300&fit=crop`,
-    location: { 
-      lat: ad.location_lat || userLocation.lat, 
-      lng: ad.location_lng || userLocation.lng 
-    },
-    workerId: ad.user_id // Add worker ID for booking
-  }));
-
-  const filteredServices = services.filter(service => {
-    const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         service.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory;
-    const withinDistance = service.distance <= distanceFilter;
-    
-    return matchesSearch && matchesCategory && withinDistance;
-  });
-
-  const handleShowAdForm = () => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    setShowAdForm(true);
+  // Transform ads data to match Service interface
+  const transformAdsToServices = (adsData: any[]): Service[] => {
+    return adsData.map(ad => ({
+      id: ad.id,
+      title: ad.title,
+      description: ad.description,
+      price: Number(ad.price),
+      category: ad.category,
+      provider: ad.profiles?.full_name || 'Unknown Provider',
+      rating: ad.profiles?.rating || 0,
+      distance: ad.location_lat && ad.location_lng 
+        ? calculateDistance(userLocation.lat, userLocation.lng, ad.location_lat, ad.location_lng)
+        : 0,
+      image: ad.image_url || '/placeholder.svg',
+      location: {
+        lat: ad.location_lat || userLocation.lat,
+        lng: ad.location_lng || userLocation.lng
+      },
+      user_id: ad.user_id,
+      profiles: ad.profiles
+    }));
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const services = transformAdsToServices(isSearching ? searchResults : ads);
+
+  const filteredServices = services.filter(service => {
+    const categoryMatch = selectedCategory === 'all' || service.category === selectedCategory;
+    const distanceMatch = service.distance <= distanceFilter;
+    return categoryMatch && distanceMatch;
+  });
+
+  const handleSearch = async (query: string, location?: { lat: number; lng: number }, radius?: number) => {
+    setIsSearching(true);
+    const results = await searchAds(query, location, radius);
+    setSearchResults(results);
+  };
+
+  const clearSearch = () => {
+    setIsSearching(false);
+    setSearchResults([]);
+  };
+
+  const handleBookService = (service: Service) => {
+    setSelectedService(service);
+  };
+
+  const handleMessageUser = (userId: string, userName: string, userImage?: string) => {
+    setSelectedMessageUser({ id: userId, name: userName, image: userImage });
+  };
+
+  const handleCloseBooking = () => {
+    setSelectedService(null);
+  };
+
+  const handleCloseMessage = () => {
+    setSelectedMessageUser(null);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col">
-      <Navbar 
-        isWorkerMode={isWorkerMode}
-        onToggleMode={() => setIsWorkerMode(!isWorkerMode)}
-        onShowAdForm={handleShowAdForm}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
+      <Navbar />
       
-      <SearchHero 
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        isWorkerMode={isWorkerMode}
-      />
+      {!selectedMessageUser && (
+        <>
+          <SearchHero />
+          
+          <div className="container mx-auto px-4 py-8">
+            <SearchBar 
+              onSearch={handleSearch}
+              userLocation={userLocation}
+            />
+            
+            {isSearching && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <span className="text-blue-800">
+                    Showing search results ({searchResults.length} found)
+                  </span>
+                  <button
+                    onClick={clearSearch}
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Clear Search
+                  </button>
+                </div>
+              </div>
+            )}
 
-      {/* Emergency Button - Fixed position for mobile */}
-      <button
-        onClick={() => setShowEmergencyNav(true)}
-        className="fixed bottom-6 right-6 bg-red-500 text-white p-4 rounded-full shadow-lg hover:bg-red-600 transition-colors z-40 flex items-center gap-2"
-      >
-        <AlertTriangle size={24} />
-        <span className="hidden sm:inline font-medium">Emergency</span>
-      </button>
-
-      <div className="container mx-auto px-4 py-4 sm:py-8 flex-1">
-        {!isWorkerMode && (
-          <>
-            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 mb-6 sm:mb-8">
-              <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                <CategoryFilter 
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="lg:col-span-1 space-y-6">
+                <CategoryFilter
                   selectedCategory={selectedCategory}
                   onCategoryChange={setSelectedCategory}
                 />
-                <DistanceFilter 
-                  distanceFilter={distanceFilter}
+                <DistanceFilter
+                  distance={distanceFilter}
                   onDistanceChange={setDistanceFilter}
                 />
               </div>
-              
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowMap(false)}
-                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm sm:text-base ${
-                    !showMap 
-                      ? 'bg-orange-500 text-white shadow-lg' 
-                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <List size={20} />
-                  <span className="hidden sm:inline">List View</span>
-                  <span className="sm:hidden">List</span>
-                </button>
-                <button
-                  onClick={() => setShowMap(true)}
-                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm sm:text-base ${
-                    showMap 
-                      ? 'bg-orange-500 text-white shadow-lg' 
-                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <MapPin size={20} />
-                  <span className="hidden sm:inline">Map View</span>
-                  <span className="sm:hidden">Map</span>
-                </button>
-              </div>
-            </div>
 
-            {adsLoading ? (
-              <div className="text-center py-16">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-500 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading ads...</p>
-              </div>
-            ) : (
-              <>
-                {showMap ? (
-                  <MapView 
-                    services={filteredServices}
-                    userLocation={userLocation}
-                    distanceFilter={distanceFilter}
-                  />
+              <div className="lg:col-span-3">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {isSearching ? 'Search Results' : 'Available Services'}
+                    <span className="text-lg font-normal text-gray-600 ml-2">
+                      ({filteredServices.length} services)
+                    </span>
+                  </h2>
+                  
+                  <div className="flex bg-white rounded-lg shadow-md overflow-hidden">
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                        viewMode === 'list'
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <List size={20} />
+                      <span className="hidden sm:inline">List View</span>
+                      <span className="sm:hidden">List</span>
+                    </button>
+                    <button
+                      onClick={() => setViewMode('map')}
+                      className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                        viewMode === 'map'
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <MapPin size={20} />
+                      <span className="hidden sm:inline">Map View</span>
+                      <span className="sm:hidden">Map</span>
+                    </button>
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading services...</p>
+                  </div>
                 ) : (
-                  <ServiceGrid services={filteredServices} />
+                  <>
+                    {viewMode === 'list' ? (
+                      <ServiceGrid 
+                        services={filteredServices} 
+                        onBook={handleBookService}
+                        onMessage={handleMessageUser}
+                      />
+                    ) : (
+                      <MapView
+                        services={filteredServices}
+                        userLocation={userLocation}
+                        distanceFilter={distanceFilter}
+                      />
+                    )}
+                  </>
                 )}
-              </>
-            )}
-          </>
-        )}
-
-        {isWorkerMode && user && (
-          <div className="text-center py-8 sm:py-16">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Worker Dashboard</h2>
-            <p className="text-gray-600 mb-6 sm:mb-8 px-4">Manage your ads and services from here</p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-              <button
-                onClick={() => setShowAdForm(true)}
-                className="bg-orange-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-orange-600 transition-colors font-medium text-base sm:text-lg"
-              >
-                Post Your First Ad
-              </button>
-              <button
-                onClick={() => navigate('/profile')}
-                className="bg-gray-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-gray-600 transition-colors font-medium text-base sm:text-lg"
-              >
-                View Profile
-              </button>
+              </div>
             </div>
           </div>
-        )}
+        </>
+      )}
 
-        {isWorkerMode && !user && (
-          <div className="text-center py-8 sm:py-16">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Sign in Required</h2>
-            <p className="text-gray-600 mb-6 sm:mb-8 px-4">Please sign in to access the worker dashboard</p>
-            <button
-              onClick={() => navigate('/auth')}
-              className="bg-orange-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-orange-600 transition-colors font-medium text-base sm:text-lg"
-            >
-              Sign In
-            </button>
+      {selectedMessageUser && (
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <MessageThread
+              otherUserId={selectedMessageUser.id}
+              otherUserName={selectedMessageUser.name}
+              otherUserImage={selectedMessageUser.image}
+              onBack={handleCloseMessage}
+            />
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {selectedService && (
+        <BookingModal
+          service={selectedService}
+          onClose={handleCloseBooking}
+        />
+      )}
 
       <Footer />
-
-      {showAdForm && (
-        <AdForm 
-          onClose={() => setShowAdForm(false)}
-          userLocation={userLocation}
-          onAdAdded={addAd}
-        />
-      )}
-
-      {showEmergencyNav && (
-        <EmergencyNavigation 
-          userLocation={userLocation}
-          onClose={() => setShowEmergencyNav(false)}
-        />
-      )}
     </div>
   );
 };
