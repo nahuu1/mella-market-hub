@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +27,7 @@ interface UserAd {
   image_url: string;
   is_active: boolean;
   created_at: string;
+  ad_type: string;
 }
 
 interface Certification {
@@ -116,15 +118,43 @@ const Profile = () => {
       }
 
       const file = event.target.files[0];
+      
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image under 10MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select a valid image file (JPEG, PNG, GIF, or WebP).",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
       const filePath = `profile-images/${fileName}`;
 
+      console.log('Uploading profile image to path:', filePath);
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { 
+          cacheControl: '3600',
+          upsert: false 
+        });
 
       if (uploadError) {
+        console.error('Upload error:', uploadError);
         throw uploadError;
       }
 
@@ -141,6 +171,7 @@ const Profile = () => {
         .eq('id', user?.id);
 
       if (updateError) {
+        console.error('Profile update error:', updateError);
         throw updateError;
       }
 
@@ -150,6 +181,8 @@ const Profile = () => {
         title: "Success",
         description: "Profile image updated successfully!",
       });
+
+      console.log('Profile image updated successfully:', publicUrl);
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({
@@ -168,6 +201,19 @@ const Profile = () => {
 
   const handleProfileUpdated = (updatedProfile: any) => {
     setProfile(updatedProfile);
+  };
+
+  const getAdTypeBadge = (adType: string) => {
+    switch (adType) {
+      case 'service':
+        return <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Service</span>;
+      case 'sell':
+        return <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">For Sale</span>;
+      case 'rent':
+        return <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">For Rent</span>;
+      default:
+        return <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">Service</span>;
+    }
   };
 
   if (!user) {
@@ -231,7 +277,7 @@ const Profile = () => {
                 <input
                   type="file"
                   className="hidden"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   onChange={uploadProfileImage}
                   disabled={uploading}
                 />
@@ -347,13 +393,16 @@ const Profile = () => {
                         )}
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-gray-800">{ad.title}</h3>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            ad.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {ad.is_active ? 'Active' : 'Inactive'}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              ad.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {ad.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                            {getAdTypeBadge(ad.ad_type)}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">{ad.description}</p>
+                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{ad.description}</p>
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-green-600">ETB {ad.price}</span>
                           <span className="text-xs text-gray-500">{ad.category}</span>

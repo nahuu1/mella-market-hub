@@ -17,6 +17,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     phone_number: profile?.phone_number || '',
@@ -36,13 +37,20 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
 
       // Upload new image if selected
       if (selectedFile) {
+        setUploading(true);
+        
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${user.id}-${Date.now()}.${fileExt}`;
         const filePath = `profile-images/${fileName}`;
 
+        console.log('Uploading file to path:', filePath);
+
         const { error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(filePath, selectedFile, { upsert: true });
+          .upload(filePath, selectedFile, { 
+            cacheControl: '3600',
+            upsert: false 
+          });
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
@@ -54,6 +62,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
           .getPublicUrl(filePath);
 
         finalImageUrl = publicUrl;
+        console.log('Image uploaded successfully, URL:', finalImageUrl);
       }
 
       const { data, error } = await supabase
@@ -95,17 +104,57 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
       });
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   };
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select an image under 10MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select a valid image file (JPEG, PNG, GIF, or WebP).",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setSelectedFile(file);
+      
       // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-      setFormData(prev => ({ ...prev, profile_image_url: previewUrl }));
+      const preview = URL.createObjectURL(file);
+      setPreviewUrl(preview);
+      
+      console.log('Image selected:', file.name, 'Size:', file.size, 'Type:', file.type);
     }
+  };
+
+  // Clean up preview URL when component unmounts or new file is selected
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const getDisplayImage = () => {
+    if (previewUrl) return previewUrl;
+    if (formData.profile_image_url) return formData.profile_image_url;
+    return null;
   };
 
   return (
@@ -125,9 +174,9 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="flex flex-col items-center">
             <div className="relative mb-4">
-              {formData.profile_image_url ? (
+              {getDisplayImage() ? (
                 <img
-                  src={formData.profile_image_url}
+                  src={getDisplayImage()!}
                   alt="Profile"
                   className="w-24 h-24 rounded-full object-cover border-4 border-green-200"
                 />
@@ -146,7 +195,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
                 <input
                   type="file"
                   className="hidden"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   onChange={handleImageSelect}
                   disabled={uploading || loading}
                 />
@@ -212,7 +261,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
             <button
               type="submit"
               className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
-              disabled={loading}
+              disabled={loading || uploading}
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
