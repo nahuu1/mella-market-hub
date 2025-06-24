@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { User, Star, MapPin, Edit, Plus, Award, Phone, Mail, Home, Upload, Camera } from 'lucide-react';
+import { User, Star, MapPin, Edit, Plus, Award, Phone, Mail, Home, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ProfileEdit } from '@/components/ProfileEdit';
 
@@ -117,7 +117,7 @@ const Profile = () => {
 
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}.${fileExt}`;
+      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
       const filePath = `profile-images/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -134,7 +134,10 @@ const Profile = () => {
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ profile_image_url: publicUrl })
+        .update({ 
+          profile_image_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', user?.id);
 
       if (updateError) {

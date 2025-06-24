@@ -11,21 +11,28 @@ interface WorkerFormProps {
   onServiceAdded: (service: any) => void;
 }
 
-const categories = [
+const serviceCategories = [
   'Cleaning', 'Delivery', 'Tech Support', 'Home Repair', 'Tutoring',
   'Photography', 'Catering', 'Transportation', 'Beauty', 'Fitness'
+];
+
+const productCategories = [
+  'Electronics', 'Furniture', 'Clothing', 'Books', 'Sports Equipment',
+  'Musical Instruments', 'Home Appliances', 'Vehicles', 'Tools', 'Other'
 ];
 
 export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, onServiceAdded }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: categories[0],
+    category: serviceCategories[0],
     price: '',
-    image: ''
+    type: 'service', // 'service', 'sell', 'rent'
+    image: null as File | null
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +41,7 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
     if (!user) {
       toast({
         title: "Authentication Required",
-        description: "Please log in to post a service.",
+        description: "Please log in to post a listing.",
         variant: "destructive",
       });
       return;
@@ -43,20 +50,23 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
     setLoading(true);
 
     try {
-      let imageUrl = formData.image;
+      let imageUrl = '';
 
       // Upload image to Supabase storage if provided
-      if (formData.image && formData.image.startsWith('data:')) {
-        const fileName = `ad-${Date.now()}.jpg`;
-        const base64Data = formData.image.split(',')[1];
-        const blob = new Blob([Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))], { type: 'image/jpeg' });
+      if (formData.image) {
+        const fileName = `ad-${Date.now()}-${formData.image.name}`;
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(`ads/${fileName}`, blob);
+          .upload(`ads/${fileName}`, formData.image);
 
         if (uploadError) {
           console.error('Image upload error:', uploadError);
+          toast({
+            title: "Image Upload Error",
+            description: "Failed to upload image, but will continue without it.",
+            variant: "destructive",
+          });
         } else {
           const { data: { publicUrl } } = supabase.storage
             .from('avatars')
@@ -77,7 +87,8 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
           location_lat: userLocation.lat + (Math.random() - 0.5) * 0.02,
           location_lng: userLocation.lng + (Math.random() - 0.5) * 0.02,
           user_id: user.id,
-          is_active: true
+          is_active: true,
+          ad_type: formData.type // Add type field to distinguish services/products
         })
         .select()
         .single();
@@ -86,7 +97,7 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
         console.error('Error creating ad:', error);
         toast({
           title: "Error",
-          description: "Failed to post service. Please try again.",
+          description: "Failed to post listing. Please try again.",
           variant: "destructive",
         });
         return;
@@ -94,7 +105,7 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
 
       toast({
         title: "Success",
-        description: "Your service has been posted successfully!",
+        description: `Your ${formData.type} has been posted successfully!`,
       });
 
       onServiceAdded(data);
@@ -102,7 +113,7 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
       console.error('Error:', error);
       toast({
         title: "Error",
-        description: "Failed to post service. Please try again.",
+        description: "Failed to post listing. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -113,11 +124,29 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData({ ...formData, image: e.target?.result as string });
-      };
-      reader.readAsDataURL(file);
+      setFormData({ ...formData, image: file });
+    }
+  };
+
+  const getCurrentCategories = () => {
+    return formData.type === 'service' ? serviceCategories : productCategories;
+  };
+
+  const getFormTitle = () => {
+    switch (formData.type) {
+      case 'service': return 'Post a Service';
+      case 'sell': return 'Sell a Product';
+      case 'rent': return 'Rent a Product';
+      default: return 'Create Listing';
+    }
+  };
+
+  const getPricePlaceholder = () => {
+    switch (formData.type) {
+      case 'service': return '0.00';
+      case 'sell': return '0.00';
+      case 'rent': return '0.00 per day';
+      default: return '0.00';
     }
   };
 
@@ -125,7 +154,7 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">Post a Service</h2>
+          <h2 className="text-2xl font-bold text-gray-800">{getFormTitle()}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -136,17 +165,74 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Type Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Service Title
+              Listing Type
+            </label>
+            <div className="grid grid-cols-3 gap-4">
+              <button
+                type="button"
+                onClick={() => setFormData({ 
+                  ...formData, 
+                  type: 'service',
+                  category: serviceCategories[0]
+                })}
+                className={`p-3 rounded-lg border-2 transition-colors ${
+                  formData.type === 'service'
+                    ? 'border-green-500 bg-green-50 text-green-700'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+                disabled={loading}
+              >
+                Service
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ 
+                  ...formData, 
+                  type: 'sell',
+                  category: productCategories[0]
+                })}
+                className={`p-3 rounded-lg border-2 transition-colors ${
+                  formData.type === 'sell'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+                disabled={loading}
+              >
+                Sell
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ 
+                  ...formData, 
+                  type: 'rent',
+                  category: productCategories[0]
+                })}
+                className={`p-3 rounded-lg border-2 transition-colors ${
+                  formData.type === 'rent'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+                disabled={loading}
+              >
+                Rent
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {formData.type === 'service' ? 'Service' : 'Product'} Title
             </label>
             <input
               type="text"
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="e.g., Professional House Cleaning"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              placeholder={formData.type === 'service' ? 'e.g., Professional House Cleaning' : 'e.g., iPhone 13 Pro Max'}
               disabled={loading}
             />
           </div>
@@ -160,8 +246,8 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Describe your service in detail..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              placeholder={formData.type === 'service' ? 'Describe your service in detail...' : 'Describe your product, condition, etc...'}
               disabled={loading}
             />
           </div>
@@ -174,10 +260,10 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 disabled={loading}
               >
-                {categories.map((category) => (
+                {getCurrentCategories().map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -187,7 +273,7 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Price (ETB)
+                Price (ETB) {formData.type === 'rent' && '/ Day'}
               </label>
               <input
                 type="number"
@@ -196,8 +282,8 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
                 step="0.01"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="0.00"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder={getPricePlaceholder()}
                 disabled={loading}
               />
             </div>
@@ -205,28 +291,35 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Service Image
+              {formData.type === 'service' ? 'Service' : 'Product'} Image
             </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
                 className="hidden"
                 id="image-upload"
-                disabled={loading}
+                disabled={loading || uploading}
               />
               <label htmlFor="image-upload" className="cursor-pointer">
-                <Upload size={32} className="mx-auto text-gray-400 mb-2" />
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-2"></div>
+                ) : (
+                  <Upload size={32} className="mx-auto text-gray-400 mb-2" />
+                )}
                 <p className="text-gray-600">Click to upload an image</p>
                 <p className="text-sm text-gray-400">PNG, JPG up to 10MB</p>
               </label>
               {formData.image && (
-                <img
-                  src={formData.image}
-                  alt="Preview"
-                  className="mt-4 h-32 w-full object-cover rounded-lg"
-                />
+                <div className="mt-4">
+                  <p className="text-sm text-green-600 mb-2">Selected: {formData.image.name}</p>
+                  <img
+                    src={URL.createObjectURL(formData.image)}
+                    alt="Preview"
+                    className="h-32 w-full object-cover rounded-lg"
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -236,7 +329,7 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
             <div>
               <h4 className="font-medium text-blue-900">Location Information</h4>
               <p className="text-sm text-blue-700">
-                Your service will be visible to customers within 10km of your current location.
+                Your listing will be visible to users within 10km of your current location.
               </p>
             </div>
           </div>
@@ -252,10 +345,10 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium disabled:opacity-50"
+              className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
               disabled={loading}
             >
-              {loading ? 'Posting...' : 'Post Service'}
+              {loading ? 'Posting...' : `Post ${formData.type === 'service' ? 'Service' : 'Product'}`}
             </button>
           </div>
         </form>

@@ -16,6 +16,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     phone_number: profile?.phone_number || '',
@@ -31,13 +32,37 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
     setLoading(true);
 
     try {
+      let finalImageUrl = formData.profile_image_url;
+
+      // Upload new image if selected
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+        const filePath = `profile-images/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, selectedFile, { upsert: true });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        finalImageUrl = publicUrl;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .update({
           full_name: formData.full_name,
           phone_number: formData.phone_number,
           bio: formData.bio,
-          profile_image_url: formData.profile_image_url,
+          profile_image_url: finalImageUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
@@ -73,46 +98,13 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
     }
   };
 
-  const uploadProfileImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploading(true);
-      
-      if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('You must select an image to upload.');
-      }
-
-      const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
-      const filePath = `profile-images/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      setFormData(prev => ({ ...prev, profile_image_url: publicUrl }));
-      
-      toast({
-        title: "Success",
-        description: "Profile image uploaded successfully!",
-      });
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload profile image. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setUploading(false);
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setFormData(prev => ({ ...prev, profile_image_url: previewUrl }));
     }
   };
 
@@ -155,11 +147,14 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
                   type="file"
                   className="hidden"
                   accept="image/*"
-                  onChange={uploadProfileImage}
+                  onChange={handleImageSelect}
                   disabled={uploading || loading}
                 />
               </label>
             </div>
+            {selectedFile && (
+              <p className="text-sm text-green-600">New image selected: {selectedFile.name}</p>
+            )}
           </div>
 
           <div>
