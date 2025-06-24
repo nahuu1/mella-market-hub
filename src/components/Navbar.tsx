@@ -2,12 +2,14 @@
 import React, { useState } from 'react';
 import { Search, Menu, X, User, MessageCircle, Plus, Home } from 'lucide-react';
 import { LoginModal } from './LoginModal';
+import { WorkerForm } from './WorkerForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showWorkerForm, setShowWorkerForm] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -34,6 +36,23 @@ export const Navbar = () => {
       setShowLoginModal(true);
     }
   };
+
+  const handlePostServiceClick = () => {
+    if (user) {
+      setShowWorkerForm(true);
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  const handleServiceAdded = () => {
+    setShowWorkerForm(false);
+    // Refresh the page to show the new service
+    window.location.reload();
+  };
+
+  // Default location for Addis Ababa
+  const userLocation = { lat: 9.0320, lng: 38.7469 };
 
   return (
     <>
@@ -68,7 +87,10 @@ export const Navbar = () => {
                 <span>Messages</span>
               </button>
 
-              <button className="flex items-center space-x-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+              <button 
+                onClick={handlePostServiceClick}
+                className="flex items-center space-x-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
                 <Plus size={20} />
                 <span>Post Service</span>
               </button>
@@ -126,7 +148,13 @@ export const Navbar = () => {
                   <span>Messages</span>
                 </button>
 
-                <button className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-fit">
+                <button 
+                  onClick={() => {
+                    handlePostServiceClick();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-fit"
+                >
                   <Plus size={20} />
                   <span>Post Service</span>
                 </button>
@@ -161,6 +189,14 @@ export const Navbar = () => {
 
       {showLoginModal && (
         <LoginModal onClose={() => setShowLoginModal(false)} />
+      )}
+
+      {showWorkerForm && (
+        <WorkerForm 
+          onClose={() => setShowWorkerForm(false)}
+          userLocation={userLocation}
+          onServiceAdded={handleServiceAdded}
+        />
       )}
     </>
   );

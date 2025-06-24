@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { User, Star, MapPin, Edit, Plus, Award, Phone, Mail, Home, Upload, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ProfileEdit } from '@/components/ProfileEdit';
 
 interface UserProfile {
   id: string;
@@ -47,6 +48,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('ads');
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -161,6 +163,10 @@ const Profile = () => {
     navigate('/add-certification');
   };
 
+  const handleProfileUpdated = (updatedProfile: any) => {
+    setProfile(updatedProfile);
+  };
+
   if (!user) {
     return null;
   }
@@ -230,26 +236,38 @@ const Profile = () => {
             </div>
 
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                {profile?.full_name || 'User Name'}
-              </h1>
-              
-              <div className="flex items-center gap-4 mb-4">
-                {profile?.rating && profile.rating > 0 ? (
-                  <div className="flex items-center gap-1">
-                    <Star size={20} className="text-yellow-500 fill-current" />
-                    <span className="font-medium">{profile.rating.toFixed(1)}</span>
-                    <span className="text-gray-500">({profile.total_ratings} reviews)</span>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                    {profile?.full_name || 'User Name'}
+                  </h1>
+                  
+                  <div className="flex items-center gap-4 mb-4">
+                    {profile?.rating && profile.rating > 0 ? (
+                      <div className="flex items-center gap-1">
+                        <Star size={20} className="text-yellow-500 fill-current" />
+                        <span className="font-medium">{profile.rating.toFixed(1)}</span>
+                        <span className="text-gray-500">({profile.total_ratings} reviews)</span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">No ratings yet</span>
+                    )}
                   </div>
-                ) : (
-                  <span className="text-gray-500">No ratings yet</span>
-                )}
+                </div>
+                
+                <button
+                  onClick={() => setShowEditProfile(true)}
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Edit size={16} />
+                  Edit Profile
+                </button>
               </div>
 
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-gray-600">
                   <Mail size={16} />
-                  <span>{profile?.email}</span>
+                  <span>{user?.email}</span>
                 </div>
                 {profile?.phone_number && (
                   <div className="flex items-center gap-2 text-gray-600">
@@ -398,6 +416,14 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {showEditProfile && profile && (
+        <ProfileEdit
+          profile={profile}
+          onClose={() => setShowEditProfile(false)}
+          onProfileUpdated={handleProfileUpdated}
+        />
+      )}
     </div>
   );
 };
