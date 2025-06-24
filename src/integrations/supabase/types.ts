@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       ads: {
         Row: {
+          ad_type: string
           category: string
           created_at: string | null
           description: string
@@ -25,6 +26,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ad_type?: string
           category: string
           created_at?: string | null
           description: string
@@ -39,6 +41,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ad_type?: string
           category?: string
           created_at?: string | null
           description?: string

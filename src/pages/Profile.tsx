@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,7 +76,7 @@ const Profile = () => {
         setProfile(profileData);
       }
 
-      // Fetch user ads
+      // Fetch user ads - now including ad_type
       const { data: adsData, error: adsError } = await supabase
         .from('ads')
         .select('*')
