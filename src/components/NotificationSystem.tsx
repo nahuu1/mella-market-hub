@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Bell, X, MessageCircle, Calendar, User } from 'lucide-react';
+import { Bell, X, MessageCircle, Calendar, User, Check, Phone } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +8,7 @@ interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'message' | 'booking_request' | 'rating' | 'general';
+  type: 'message' | 'booking_request' | 'booking_response' | 'rating' | 'general';
   read: boolean;
   created_at: string;
   data?: any;
@@ -40,14 +39,23 @@ export const NotificationSystem: React.FC = () => {
         },
         (payload) => {
           console.log('New notification:', payload);
-          const newNotification = payload.new as Notification;
-          setNotifications(prev => [newNotification, ...prev]);
+          const newNotification = payload.new as any;
+          const mappedNotification: Notification = {
+            id: newNotification.id,
+            title: newNotification.title,
+            message: newNotification.message,
+            type: newNotification.type as Notification['type'],
+            read: newNotification.read,
+            created_at: newNotification.created_at,
+            data: newNotification.data
+          };
+          setNotifications(prev => [mappedNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
           
           // Show toast notification
           toast({
-            title: newNotification.title,
-            description: newNotification.message,
+            title: mappedNotification.title,
+            description: mappedNotification.message,
           });
         }
       )
@@ -74,11 +82,81 @@ export const NotificationSystem: React.FC = () => {
         return;
       }
 
-      setNotifications(data || []);
-      const unread = data?.filter(n => !n.read).length || 0;
+      const mappedNotifications: Notification[] = (data || []).map(item => ({
+        id: item.id,
+        title: item.title,
+        message: item.message,
+        type: item.type as Notification['type'],
+        read: item.read,
+        created_at: item.created_at,
+        data: item.data
+      }));
+
+      setNotifications(mappedNotifications);
+      const unread = mappedNotifications.filter(n => !n.read).length;
       setUnreadCount(unread);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const handleBookingAction = async (notificationId: string, bookingId: string, action: 'accept' | 'reject') => {
+    try {
+      // Update booking status
+      const { error: bookingError } = await supabase
+        .from('bookings')
+        .update({ status: action === 'accept' ? 'accepted' : 'rejected' })
+        .eq('id', bookingId);
+
+      if (bookingError) {
+        console.error('Error updating booking:', bookingError);
+        return;
+      }
+
+      // Get booking details for notification
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          ads(title),
+          profiles!customer_id(full_name, phone_number)
+        `)
+        .eq('id', bookingId)
+        .single();
+
+      if (booking) {
+        // Send notification to customer
+        await supabase
+          .from('notifications')
+          .insert([{
+            user_id: booking.customer_id,
+            type: 'booking_response',
+            title: `Booking ${action === 'accept' ? 'Accepted' : 'Rejected'}`,
+            message: `Your booking request for "${booking.ads?.title}" has been ${action}ed.`,
+            data: {
+              booking_id: bookingId,
+              action: action,
+              service_title: booking.ads?.title
+            }
+          }]);
+      }
+
+      // Mark notification as read
+      await markAsRead(notificationId);
+
+      toast({
+        title: "Success",
+        description: `Booking request ${action}ed successfully.`,
+      });
+
+      fetchNotifications(); // Refresh notifications
+    } catch (error) {
+      console.error('Error handling booking action:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process booking request.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -128,6 +206,8 @@ export const NotificationSystem: React.FC = () => {
         return <MessageCircle size={16} className="text-blue-500" />;
       case 'booking_request':
         return <Calendar size={16} className="text-green-500" />;
+      case 'booking_response':
+        return <Check size={16} className="text-purple-500" />;
       case 'rating':
         return <User size={16} className="text-yellow-500" />;
       default:
@@ -163,7 +243,7 @@ export const NotificationSystem: React.FC = () => {
       </button>
 
       {showNotifications && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+        <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-800">Notifications</h3>
@@ -195,20 +275,63 @@ export const NotificationSystem: React.FC = () => {
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                    !notification.read ? 'bg-blue-50' : ''
+                  className={`p-4 border-b border-gray-100 ${
+                    !notification.read ? 'bg-blue-50' : 'hover:bg-gray-50'
                   }`}
                   onClick={() => markAsRead(notification.id)}
                 >
                   <div className="flex items-start gap-3">
                     {getNotificationIcon(notification.type)}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">
+                      <p className="text-sm font-medium text-gray-800">
                         {notification.title}
                       </p>
                       <p className="text-sm text-gray-600 mt-1">
                         {notification.message}
                       </p>
+                      
+                      {/* Customer Information for Booking Requests */}
+                      {notification.type === 'booking_request' && notification.data && (
+                        <div className="mt-2 p-2 bg-gray-50 rounded border">
+                          <p className="text-xs text-gray-600 mb-1">Customer Details:</p>
+                          <p className="text-sm font-medium">{notification.data.customer_name}</p>
+                          {notification.data.customer_phone && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Phone size={12} className="text-gray-500" />
+                              <a 
+                                href={`tel:${notification.data.customer_phone}`}
+                                className="text-sm text-blue-600 hover:text-blue-800"
+                              >
+                                {notification.data.customer_phone}
+                              </a>
+                            </div>
+                          )}
+                          {notification.data.message && (
+                            <p className="text-xs text-gray-500 mt-1 italic">
+                              "{notification.data.message}"
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Booking Request Actions */}
+                      {notification.type === 'booking_request' && notification.data?.booking_id && (
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => handleBookingAction(notification.id, notification.data.booking_id, 'accept')}
+                            className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition-colors"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleBookingAction(notification.id, notification.data.booking_id, 'reject')}
+                            className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+
                       <p className="text-xs text-gray-500 mt-2">
                         {formatDate(notification.created_at)}
                       </p>

@@ -29,17 +29,17 @@ export const useBookings = () => {
     setLoading(true);
 
     try {
-      // Get customer profile for phone number
+      // Get customer profile with all details
       const { data: customerProfile } = await supabase
         .from('profiles')
-        .select('full_name, phone_number')
+        .select('full_name, phone_number, email')
         .eq('id', user.id)
         .single();
 
       // Get ad details
       const { data: adData } = await supabase
         .from('ads')
-        .select('title, user_id')
+        .select('title, user_id, price')
         .eq('id', bookingData.adId)
         .single();
 
@@ -64,9 +64,10 @@ export const useBookings = () => {
         throw error;
       }
 
-      // Create notification for the worker
-      const customerName = customerProfile?.full_name || user.email;
+      // Create notification for the worker with detailed customer info
+      const customerName = customerProfile?.full_name || user.email || 'Anonymous Customer';
       const customerPhone = customerProfile?.phone_number || 'Not provided';
+      const customerEmail = customerProfile?.email || user.email || 'Not provided';
       
       await supabase
         .from('notifications')
@@ -74,13 +75,16 @@ export const useBookings = () => {
           user_id: bookingData.workerId,
           type: 'booking_request',
           title: 'New Booking Request',
-          message: `${customerName} wants to book your service "${adData.title}". Phone: ${customerPhone}`,
+          message: `${customerName} wants to book your service "${adData.title}" for ETB ${adData.price?.toLocaleString()}`,
           data: {
             booking_id: booking.id,
             customer_name: customerName,
             customer_phone: customerPhone,
+            customer_email: customerEmail,
             ad_title: adData.title,
-            message: bookingData.message
+            ad_price: adData.price,
+            message: bookingData.message,
+            service_date: bookingData.serviceDate
           }
         }]);
 
