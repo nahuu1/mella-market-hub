@@ -57,7 +57,10 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
     onBook?.(service);
   };
 
-  const handleUserProfileClick = () => {
+  const handleUserProfileClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('User profile clicked for user:', service.user_id);
     if (onUserProfileClick) {
       onUserProfileClick(service.user_id);
     }

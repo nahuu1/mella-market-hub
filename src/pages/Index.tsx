@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { SearchHero } from '@/components/SearchHero';
@@ -49,6 +48,7 @@ const Index = () => {
     name: string;
     image?: string;
   } | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,12 +118,21 @@ const Index = () => {
     setSelectedMessageUser({ id: userId, name: userName, image: userImage });
   };
 
+  const handleUserProfileClick = (userId: string) => {
+    console.log('Opening user profile for:', userId);
+    setSelectedUserProfile(userId);
+  };
+
   const handleCloseBooking = () => {
     setSelectedService(null);
   };
 
   const handleCloseMessage = () => {
     setSelectedMessageUser(null);
+  };
+
+  const handleCloseUserProfile = () => {
+    setSelectedUserProfile(null);
   };
 
   return (
@@ -221,6 +230,7 @@ const Index = () => {
                         services={filteredServices} 
                         onBook={handleBookService}
                         onMessage={handleMessageUser}
+                        onUserProfileClick={handleUserProfileClick}
                       />
                     ) : (
                       <MapView
@@ -255,6 +265,14 @@ const Index = () => {
           service={selectedService}
           workerId={selectedService.user_id}
           onClose={handleCloseBooking}
+        />
+      )}
+
+      {selectedUserProfile && (
+        <UserProfileModal
+          userId={selectedUserProfile}
+          onClose={handleCloseUserProfile}
+          onMessage={handleMessageUser}
         />
       )}
 

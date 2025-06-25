@@ -1,201 +1,167 @@
 
 import React, { useState } from 'react';
-import { Search, Menu, X, User, MessageCircle, Plus, Home } from 'lucide-react';
-import { LoginModal } from './LoginModal';
-import { WorkerForm } from './WorkerForm';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { NotificationSystem } from './NotificationSystem';
+import { UserSearch } from './UserSearch';
+import { UserProfileModal } from './UserProfile';
+import { User, LogOut, MessageSquare, Home, Plus } from 'lucide-react';
 
 export const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showWorkerForm, setShowWorkerForm] = useState(false);
-  const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, signOut } = useAuth();
+  const [selectedUserProfile, setSelectedUserProfile] = useState<string | null>(null);
 
-  const handleAuthAction = () => {
-    if (user) {
-      signOut();
-    } else {
-      setShowLoginModal(true);
-    }
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
-  const handleProfileClick = () => {
-    if (user) {
-      navigate('/profile');
-    } else {
-      setShowLoginModal(true);
-    }
+  const handleUserSearchClick = (userId: string) => {
+    setSelectedUserProfile(userId);
   };
 
-  const handleMessagesClick = () => {
-    if (user) {
-      navigate('/messages');
-    } else {
-      setShowLoginModal(true);
-    }
+  const handleCloseUserProfile = () => {
+    setSelectedUserProfile(null);
   };
 
-  const handlePostServiceClick = () => {
-    if (user) {
-      setShowWorkerForm(true);
-    } else {
-      setShowLoginModal(true);
-    }
-  };
-
-  const handleServiceAdded = () => {
-    setShowWorkerForm(false);
-    // Refresh the page to show the new service
-    window.location.reload();
-  };
-
-  // Default location for Addis Ababa
-  const userLocation = { lat: 9.0320, lng: 38.7469 };
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <>
-      <nav className="bg-white shadow-lg border-b-4 border-green-600 sticky top-0 z-50">
+      <nav className="bg-white shadow-lg border-b-4 border-green-600 sticky top-0 z-40">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <div 
-              className="flex items-center space-x-2 cursor-pointer"
+              className="flex items-center space-x-3 cursor-pointer"
               onClick={() => navigate('/')}
             >
               <div className="bg-green-600 text-white p-2 rounded-lg">
-                <Search size={24} />
+                <Home size={24} />
               </div>
-              <span className="text-2xl font-bold text-gray-800">Mella</span>
+              <div>
+                <h1 className="text-xl font-bold text-gray-800">ServiceHub</h1>
+                <p className="text-xs text-gray-600">Ethiopia's Service Marketplace</p>
+              </div>
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-6">
-              <button 
-                onClick={() => navigate('/')}
-                className="flex items-center space-x-1 text-gray-600 hover:text-green-700 transition-colors"
-              >
-                <Home size={20} />
-                <span>Home</span>
-              </button>
-              
-              <button 
-                onClick={handleMessagesClick}
-                className="flex items-center space-x-1 text-gray-600 hover:text-green-700 transition-colors"
-              >
-                <MessageCircle size={20} />
-                <span>Messages</span>
-              </button>
+            {/* Center - User Search */}
+            <div className="hidden md:block flex-1 max-w-md mx-8">
+              <UserSearch onUserClick={handleUserSearchClick} />
+            </div>
 
-              <button 
-                onClick={handlePostServiceClick}
-                className="flex items-center space-x-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <Plus size={20} />
-                <span>Post Service</span>
-              </button>
-              
-              <button 
-                onClick={handleProfileClick}
-                className="flex items-center space-x-1 text-gray-600 hover:text-green-700 transition-colors"
-              >
-                <User size={20} />
-                <span>{user ? 'Profile' : 'Login'}</span>
-              </button>
-              
-              {user && (
-                <button 
-                  onClick={handleAuthAction}
-                  className="text-gray-600 hover:text-green-700 transition-colors"
-                >
-                  Logout
-                </button>
+            {/* Right Side */}
+            <div className="flex items-center space-x-4">
+              {user ? (
+                <>
+                  {/* Notifications */}
+                  <NotificationSystem />
+
+                  {/* Messages */}
+                  <button
+                    onClick={() => navigate('/messages')}
+                    className={`p-2 rounded-full transition-colors ${
+                      isActive('/messages')
+                        ? 'bg-green-100 text-green-600'
+                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                    }`}
+                  >
+                    <MessageSquare size={20} />
+                  </button>
+
+                  {/* Post Ad */}
+                  <button
+                    onClick={() => navigate('/')}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    <span className="hidden sm:inline">Post Ad</span>
+                  </button>
+
+                  {/* Profile Dropdown */}
+                  <div className="relative group">
+                    <button
+                      className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                      onClick={() => navigate('/profile')}
+                    >
+                      {user.user_metadata?.avatar_url ? (
+                        <img
+                          src={user.user_metadata.avatar_url}
+                          alt="Profile"
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <User size={16} className="text-green-600" />
+                        </div>
+                      )}
+                      <span className="hidden md:block text-sm font-medium text-gray-700">
+                        {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+                      </span>
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                      <div className="py-2">
+                        <button
+                          onClick={() => navigate('/profile')}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                        >
+                          <User size={16} />
+                          My Profile
+                        </button>
+                        <button
+                          onClick={() => navigate('/messages')}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                        >
+                          <MessageSquare size={16} />
+                          Messages
+                        </button>
+                        <hr className="my-2" />
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                        >
+                          <LogOut size={16} />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => navigate('/auth')}
+                    className="text-gray-600 hover:text-gray-800 font-medium"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => navigate('/auth')}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Get Started
+                  </button>
+                </div>
               )}
             </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
           </div>
 
-          {/* Mobile Navigation */}
-          {isMenuOpen && (
-            <div className="md:hidden bg-white border-t border-gray-200 py-4">
-              <div className="flex flex-col space-y-4">
-                <button 
-                  onClick={() => {
-                    navigate('/');
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-green-700 transition-colors"
-                >
-                  <Home size={20} />
-                  <span>Home</span>
-                </button>
-                
-                <button 
-                  onClick={() => {
-                    handleMessagesClick();
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-green-700 transition-colors"
-                >
-                  <MessageCircle size={20} />
-                  <span>Messages</span>
-                </button>
-
-                <button 
-                  onClick={() => {
-                    handlePostServiceClick();
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-fit"
-                >
-                  <Plus size={20} />
-                  <span>Post Service</span>
-                </button>
-                
-                <button 
-                  onClick={() => {
-                    handleProfileClick();
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-green-700 transition-colors"
-                >
-                  <User size={20} />
-                  <span>{user ? 'Profile' : 'Login'}</span>
-                </button>
-                
-                {user && (
-                  <button 
-                    onClick={() => {
-                      handleAuthAction();
-                      setIsMenuOpen(false);
-                    }}
-                    className="flex items-center space-x-2 text-gray-600 hover:text-green-700 transition-colors"
-                  >
-                    <span>Logout</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Mobile User Search */}
+          <div className="md:hidden pb-4">
+            <UserSearch onUserClick={handleUserSearchClick} />
+          </div>
         </div>
       </nav>
 
-      {showLoginModal && (
-        <LoginModal onClose={() => setShowLoginModal(false)} />
-      )}
-
-      {showWorkerForm && (
-        <WorkerForm 
-          onClose={() => setShowWorkerForm(false)}
-          userLocation={userLocation}
-          onServiceAdded={handleServiceAdded}
+      {/* User Profile Modal */}
+      {selectedUserProfile && (
+        <UserProfileModal
+          userId={selectedUserProfile}
+          onClose={handleCloseUserProfile}
         />
       )}
     </>
