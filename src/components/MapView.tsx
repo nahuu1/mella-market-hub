@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -29,82 +29,277 @@ interface MapViewProps {
   distanceFilter: number;
 }
 
-export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distanceFilter }) => {
+export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initialUserLocation, distanceFilter }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const markersGroup = useRef<L.LayerGroup | null>(null);
+  const [currentLocation, setCurrentLocation] = useState(initialUserLocation);
 
-  // Emergency locations in Addis Ababa with actual phone numbers
-  const emergencyLocations = [
-    { 
-      type: 'Hospital', 
-      name: 'Tikur Anbessa Hospital', 
-      lat: 9.0366, 
-      lng: 38.7639, 
-      icon: '🏥',
-      phone: '+251-11-551-7211'
-    },
-    { 
-      type: 'Hospital', 
-      name: 'Black Lion Hospital', 
-      lat: 9.0415, 
-      lng: 38.7614, 
-      icon: '🏥',
-      phone: '+251-11-553-5370'
-    },
-    { 
-      type: 'Hospital', 
-      name: 'Bethzatha General Hospital', 
-      lat: 9.0200, 
-      lng: 38.7800, 
-      icon: '🏥',
-      phone: '+251-11-661-5544'
-    },
-    { 
-      type: 'Police', 
-      name: 'Federal Police HQ', 
-      lat: 9.0300, 
-      lng: 38.7400, 
-      icon: '🚔',
-      phone: '+251-11-551-8877'
-    },
-    { 
-      type: 'Police', 
-      name: 'Addis Ababa Police', 
-      lat: 9.0250, 
-      lng: 38.7550, 
-      icon: '🚔',
-      phone: '+251-11-551-2400'
-    },
-    { 
-      type: 'Fire Station', 
-      name: 'Addis Fire & Emergency Service', 
-      lat: 9.0250, 
-      lng: 38.7500, 
-      icon: '🚒',
-      phone: '+251-11-551-1311'
-    },
-    { 
-      type: 'Fire Station', 
-      name: 'Bole Fire Station', 
-      lat: 8.9950, 
-      lng: 38.8100, 
-      icon: '🚒',
-      phone: '+251-11-661-5544'
-    },
-    { 
-      type: 'Emergency', 
-      name: 'Ethiopian Red Cross', 
-      lat: 9.0100, 
-      lng: 38.7650, 
-      icon: '🆘',
-      phone: '+251-11-551-5393'
-    }
-  ];
+  // Get comprehensive emergency locations based on current location
+  const getEmergencyLocations = (centerLat: number, centerLng: number) => {
+    // Base emergency locations in Addis Ababa with actual phone numbers
+    const baseLocations = [
+      // Hospitals
+      { 
+        type: 'Hospital', 
+        name: 'Tikur Anbessa Hospital', 
+        lat: 9.0366, 
+        lng: 38.7639, 
+        icon: '🏥',
+        phone: '+251-11-551-7211'
+      },
+      { 
+        type: 'Hospital', 
+        name: 'Black Lion Hospital', 
+        lat: 9.0415, 
+        lng: 38.7614, 
+        icon: '🏥',
+        phone: '+251-11-553-5370'
+      },
+      { 
+        type: 'Hospital', 
+        name: 'Bethzatha General Hospital', 
+        lat: 9.0200, 
+        lng: 38.7800, 
+        icon: '🏥',
+        phone: '+251-11-661-5544'
+      },
+      { 
+        type: 'Hospital', 
+        name: 'Myungsung Christian Medical Center', 
+        lat: 8.9950, 
+        lng: 38.7450, 
+        icon: '🏥',
+        phone: '+251-11-416-2000'
+      },
+      
+      // Clinics
+      { 
+        type: 'Clinic', 
+        name: 'Bethany Medical Clinic', 
+        lat: 9.0180, 
+        lng: 38.7580, 
+        icon: '🏥',
+        phone: '+251-11-551-3344'
+      },
+      { 
+        type: 'Clinic', 
+        name: 'Family Care Clinic', 
+        lat: 9.0080, 
+        lng: 38.7680, 
+        icon: '🏥',
+        phone: '+251-11-662-1122'
+      },
+      { 
+        type: 'Clinic', 
+        name: 'Addis Medical Clinic', 
+        lat: 8.9980, 
+        lng: 38.7980, 
+        icon: '🏥',
+        phone: '+251-11-661-9988'
+      },
+      { 
+        type: 'Clinic', 
+        name: 'Bole Medical Center', 
+        lat: 8.9920, 
+        lng: 38.8080, 
+        icon: '🏥',
+        phone: '+251-11-661-7755'
+      },
+
+      // Police Stations
+      { 
+        type: 'Police', 
+        name: 'Federal Police HQ', 
+        lat: 9.0300, 
+        lng: 38.7400, 
+        icon: '🚔',
+        phone: '+251-11-551-8877'
+      },
+      { 
+        type: 'Police', 
+        name: 'Bole Police Station', 
+        lat: 8.9950, 
+        lng: 38.8100, 
+        icon: '🚔',
+        phone: '+251-11-661-2400'
+      },
+      { 
+        type: 'Police', 
+        name: 'Kirkos Police Station', 
+        lat: 9.0100, 
+        lng: 38.7550, 
+        icon: '🚔',
+        phone: '+251-11-551-2400'
+      },
+      { 
+        type: 'Police', 
+        name: 'Lideta Police Station', 
+        lat: 9.0350, 
+        lng: 38.7350, 
+        icon: '🚔',
+        phone: '+251-11-551-6677'
+      },
+
+      // Fire Stations
+      { 
+        type: 'Fire Station', 
+        name: 'Addis Fire & Emergency Service', 
+        lat: 9.0250, 
+        lng: 38.7500, 
+        icon: '🚒',
+        phone: '+251-11-551-1311'
+      },
+      { 
+        type: 'Fire Station', 
+        name: 'Bole Fire Station', 
+        lat: 8.9950, 
+        lng: 38.8100, 
+        icon: '🚒',
+        phone: '+251-11-661-5544'
+      },
+
+      // Pharmacies
+      { 
+        type: 'Pharmacy', 
+        name: 'Bethany Pharmacy', 
+        lat: 9.0150, 
+        lng: 38.7600, 
+        icon: '💊',
+        phone: '+251-11-551-3344'
+      },
+      { 
+        type: 'Pharmacy', 
+        name: 'Hayat Pharmacy', 
+        lat: 9.0050, 
+        lng: 38.7750, 
+        icon: '💊',
+        phone: '+251-11-662-2211'
+      },
+      { 
+        type: 'Pharmacy', 
+        name: 'Bole Pharmacy', 
+        lat: 8.9980, 
+        lng: 38.8050, 
+        icon: '💊',
+        phone: '+251-11-661-7788'
+      },
+      { 
+        type: 'Pharmacy', 
+        name: 'CMC Pharmacy', 
+        lat: 9.0080, 
+        lng: 38.7850, 
+        icon: '💊',
+        phone: '+251-11-662-3366'
+      },
+      { 
+        type: 'Pharmacy', 
+        name: 'Piazza Pharmacy', 
+        lat: 9.0380, 
+        lng: 38.7480, 
+        icon: '💊',
+        phone: '+251-11-551-4455'
+      },
+      { 
+        type: 'Pharmacy', 
+        name: 'Merkato Pharmacy', 
+        lat: 9.0120, 
+        lng: 38.7520, 
+        icon: '💊',
+        phone: '+251-11-551-8899'
+      },
+
+      // Emergency Services
+      { 
+        type: 'Emergency', 
+        name: 'Ethiopian Red Cross', 
+        lat: 9.0100, 
+        lng: 38.7650, 
+        icon: '🆘',
+        phone: '+251-11-551-5393'
+      },
+      { 
+        type: 'Emergency', 
+        name: 'Ambulance Service Center', 
+        lat: 9.0180, 
+        lng: 38.7580, 
+        icon: '🚑',
+        phone: '+251-11-551-9393'
+      }
+    ];
+
+    // Filter locations within reasonable distance (10km radius)
+    return baseLocations.filter(location => {
+      const distance = calculateDistance(centerLat, centerLng, location.lat, location.lng);
+      return distance <= 10; // 10km radius
+    });
+  };
+
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
 
   const handleEmergencyCall = (phone: string) => {
     window.open(`tel:${phone}`, '_self');
   };
+
+  // Get user's real-time location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setCurrentLocation(newLocation);
+          console.log('Real-time location updated:', newLocation);
+        },
+        (error) => {
+          console.log('Geolocation error:', error);
+          // Keep using the initial location if geolocation fails
+          setCurrentLocation(initialUserLocation);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+
+      // Watch for location changes
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setCurrentLocation(newLocation);
+          console.log('Location updated:', newLocation);
+        },
+        (error) => {
+          console.log('Geolocation watch error:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 60000 // 1 minute
+        }
+      );
+
+      return () => {
+        navigator.geolocation.clearWatch(watchId);
+      };
+    }
+  }, [initialUserLocation]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -117,7 +312,7 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
       touchZoom: true,
       dragging: true,
       tapTolerance: 15
-    }).setView([userLocation.lat, userLocation.lng], 13);
+    }).setView([currentLocation.lat, currentLocation.lng], 13);
 
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -141,20 +336,23 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
     // Clear existing markers
     markersGroup.current.clearLayers();
 
-    // Add user location marker
+    // Update map center to current location
+    map.current.setView([currentLocation.lat, currentLocation.lng], 13);
+
+    // Add user location marker with pulsing effect
     const userIcon = L.divIcon({
-      html: '<div style="background: #3b82f6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+      html: '<div style="background: #3b82f6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); animation: pulse 2s infinite;"></div><style>@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }</style>',
       iconSize: [20, 20],
       className: 'user-location-marker'
     });
 
-    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
+    L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon })
       .addTo(markersGroup.current)
-      .bindPopup('<strong>Your Location</strong>')
+      .bindPopup('<strong>Your Current Location</strong>')
       .openPopup();
 
     // Add distance circle
-    L.circle([userLocation.lat, userLocation.lng], {
+    L.circle([currentLocation.lat, currentLocation.lng], {
       radius: distanceFilter * 1000,
       fillColor: '#f97316',
       fillOpacity: 0.1,
@@ -183,6 +381,9 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
           </div>
         `);
     });
+
+    // Get emergency locations based on current location
+    const emergencyLocations = getEmergencyLocations(currentLocation.lat, currentLocation.lng);
 
     // Add emergency location markers
     emergencyLocations.forEach((location) => {
@@ -221,7 +422,10 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
       });
     });
 
-  }, [services, userLocation, distanceFilter]);
+  }, [services, currentLocation, distanceFilter]);
+
+  // Get emergency locations for the list display
+  const emergencyLocations = getEmergencyLocations(currentLocation.lat, currentLocation.lng);
 
   return (
     <div className="relative">
@@ -232,26 +436,30 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation, distan
       {/* Emergency Stations List - Mobile Responsive */}
       <div className="mt-4 sm:mt-6 bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
         <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-          🆘 Emergency Contacts
+          🆘 Emergency Contacts Near You
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {emergencyLocations.map((location, index) => (
-            <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-              <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                <span className="text-lg sm:text-xl">{location.icon}</span>
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{location.name}</h4>
-                  <p className="text-xs sm:text-sm text-gray-600">{location.type}</p>
+          {emergencyLocations.map((location, index) => {
+            const distance = calculateDistance(currentLocation.lat, currentLocation.lng, location.lat, location.lng);
+            return (
+              <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <span className="text-lg sm:text-xl">{location.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{location.name}</h4>
+                    <p className="text-xs sm:text-sm text-gray-600">{location.type}</p>
+                    <p className="text-xs text-gray-500">{distance.toFixed(1)} km away</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => handleEmergencyCall(location.phone)}
+                  className="w-full bg-red-600 text-white py-2 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base font-medium btn-touch"
+                >
+                  📞 {location.phone}
+                </button>
               </div>
-              <button
-                onClick={() => handleEmergencyCall(location.phone)}
-                className="w-full bg-red-600 text-white py-2 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base font-medium btn-touch"
-              >
-                📞 {location.phone}
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

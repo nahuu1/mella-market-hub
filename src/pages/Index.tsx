@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { SearchHero } from '@/components/SearchHero';
@@ -8,6 +9,7 @@ import { MapView } from '@/components/MapView';
 import { SearchBar } from '@/components/SearchBar';
 import { BookingModal } from '@/components/BookingModal';
 import { MessageThread } from '@/components/MessageThread';
+import { UserProfileModal } from '@/components/UserProfile';
 import { Footer } from '@/components/Footer';
 import { useRealTimeAds } from '@/hooks/useRealTimeAds';
 import { useLocalStorage } from '@/hooks/useLocalStorage';

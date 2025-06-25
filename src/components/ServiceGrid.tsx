@@ -24,34 +24,35 @@ interface Service {
 interface ServiceGridProps {
   services: Service[];
   onBook?: (service: Service) => void;
-  onMessage?: (userId: string, userName: string, userImage?: string) => void;
+  onMessage?: (userId: string, userName: string) => void;
+  onUserProfileClick?: (userId: string) => void;
 }
 
-export const ServiceGrid: React.FC<ServiceGridProps> = ({ services, onBook, onMessage }) => {
+export const ServiceGrid: React.FC<ServiceGridProps> = ({ 
+  services, 
+  onBook, 
+  onMessage, 
+  onUserProfileClick 
+}) => {
   if (services.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">🔍</div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">No services found</h3>
-        <p className="text-gray-600">Try adjusting your filters or search terms</p>
+        <h3 className="text-xl font-semibold text-gray-600 mb-2">No services found</h3>
+        <p className="text-gray-500">Try adjusting your filters or search terms</p>
       </div>
     );
   }
 
-  const handleMessage = (userId: string, userName: string) => {
-    const service = services.find(s => s.user_id === userId);
-    const userImage = service?.profiles?.profile_image_url;
-    onMessage?.(userId, userName, userImage);
-  };
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {services.map((service) => (
         <ServiceCard
           key={service.id}
           service={service}
           onBook={onBook}
-          onMessage={handleMessage}
+          onMessage={onMessage}
+          onUserProfileClick={onUserProfileClick}
         />
       ))}
     </div>

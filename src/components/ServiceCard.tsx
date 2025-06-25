@@ -27,9 +27,15 @@ interface ServiceCardProps {
   service: Service;
   onBook?: (service: Service) => void;
   onMessage?: (userId: string, userName: string) => void;
+  onUserProfileClick?: (userId: string) => void;
 }
 
-export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onBook, onMessage }) => {
+export const ServiceCard: React.FC<ServiceCardProps> = ({ 
+  service, 
+  onBook, 
+  onMessage, 
+  onUserProfileClick 
+}) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -49,6 +55,12 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onBook, onMes
       return;
     }
     onBook?.(service);
+  };
+
+  const handleUserProfileClick = () => {
+    if (onUserProfileClick) {
+      onUserProfileClick(service.user_id);
+    }
   };
 
   const isOwnAd = user?.id === service.user_id;
@@ -82,16 +94,23 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onBook, onMes
             <img
               src={service.profiles.profile_image_url}
               alt={service.profiles.full_name}
-              className="w-10 h-10 rounded-full object-cover"
+              className="w-10 h-10 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-orange-300 transition-all"
+              onClick={handleUserProfileClick}
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+            <div 
+              className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center cursor-pointer hover:bg-orange-200 transition-colors"
+              onClick={handleUserProfileClick}
+            >
               <User size={16} className="text-orange-600" />
             </div>
           )}
           
           <div className="flex-1">
-            <p className="font-medium text-gray-800">
+            <p 
+              className="font-medium text-gray-800 cursor-pointer hover:text-orange-600 transition-colors"
+              onClick={handleUserProfileClick}
+            >
               {service.profiles?.full_name || service.provider}
             </p>
             <div className="flex items-center gap-1">
