@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Star, MapPin, Edit, Plus, Award, Phone, Mail, Home, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ProfileEdit } from '@/components/ProfileEdit';
+import { AdForm } from '@/components/AdForm';
 
 interface UserProfile {
   id: string;
@@ -50,6 +51,10 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('ads');
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showAdForm, setShowAdForm] = useState(false);
+  
+  // User location for Addis Ababa
+  const userLocation = { lat: 9.0320, lng: 38.7469 };
 
   useEffect(() => {
     if (!user) {
@@ -215,6 +220,31 @@ const Profile = () => {
     }
   };
 
+  const handlePostNewAd = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to post an ad.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowAdForm(true);
+  };
+
+  const handleAdAdded = (newAd: any) => {
+    setShowAdForm(false);
+    setUserAds(prev => [newAd, ...prev]);
+    toast({
+      title: "Success!",
+      description: "Your ad has been posted successfully.",
+    });
+  };
+
+  const handleCloseAdForm = () => {
+    setShowAdForm(false);
+  };
+
   if (!user) {
     return null;
   }
@@ -365,7 +395,7 @@ const Profile = () => {
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-800">My Ads</h2>
                   <button
-                    onClick={() => navigate('/')}
+                    onClick={handlePostNewAd}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
                     <Plus size={16} />
@@ -377,7 +407,14 @@ const Profile = () => {
                   <div className="text-center py-12">
                     <div className="text-6xl mb-4">📝</div>
                     <h3 className="text-xl font-semibold text-gray-800 mb-2">No ads posted yet</h3>
-                    <p className="text-gray-600">Start by posting your first ad!</p>
+                    <p className="text-gray-600 mb-4">Start by posting your first ad!</p>
+                    <button
+                      onClick={handlePostNewAd}
+                      className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+                    >
+                      <Plus size={16} />
+                      Post Your First Ad
+                    </button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -473,6 +510,14 @@ const Profile = () => {
           profile={profile}
           onClose={() => setShowEditProfile(false)}
           onProfileUpdated={handleProfileUpdated}
+        />
+      )}
+
+      {showAdForm && (
+        <AdForm
+          onClose={handleCloseAdForm}
+          userLocation={userLocation}
+          onAdAdded={handleAdAdded}
         />
       )}
     </div>

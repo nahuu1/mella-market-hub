@@ -7,7 +7,11 @@ import { UserSearch } from './UserSearch';
 import { UserProfileModal } from './UserProfile';
 import { User, LogOut, MessageSquare, Home, Plus } from 'lucide-react';
 
-export const Navbar = () => {
+interface NavbarProps {
+  onPostAd?: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onPostAd }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
@@ -24,6 +28,14 @@ export const Navbar = () => {
 
   const handleCloseUserProfile = () => {
     setSelectedUserProfile(null);
+  };
+
+  const handlePostAd = () => {
+    if (onPostAd) {
+      onPostAd();
+    } else {
+      navigate('/');
+    }
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -73,7 +85,7 @@ export const Navbar = () => {
 
                   {/* Post Ad */}
                   <button
-                    onClick={() => navigate('/')}
+                    onClick={handlePostAd}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
                     <Plus size={16} />

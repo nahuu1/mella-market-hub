@@ -9,12 +9,14 @@ import { SearchBar } from '@/components/SearchBar';
 import { BookingModal } from '@/components/BookingModal';
 import { MessageThread } from '@/components/MessageThread';
 import { UserProfileModal } from '@/components/UserProfile';
+import { AdForm } from '@/components/AdForm';
 import { Footer } from '@/components/Footer';
 import { useRealTimeAds } from '@/hooks/useRealTimeAds';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { List, MapPin } from 'lucide-react';
+import { List, MapPin, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface Service {
   id: string;
@@ -38,6 +40,7 @@ interface Service {
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { ads, loading, searchAds } = useRealTimeAds();
   const [selectedCategory, setSelectedCategory] = useLocalStorage('selectedCategory', 'all');
   const [distanceFilter, setDistanceFilter] = useLocalStorage('distanceFilter', 25);
@@ -52,6 +55,7 @@ const Index = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAdForm, setShowAdForm] = useState(false);
   
   // User location for Addis Ababa
   const userLocation = { lat: 9.0320, lng: 38.7469 };
@@ -135,9 +139,35 @@ const Index = () => {
     setSelectedUserProfile(null);
   };
 
+  const handlePostAd = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to post an ad.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+    setShowAdForm(true);
+  };
+
+  const handleAdAdded = (newAd: any) => {
+    setShowAdForm(false);
+    toast({
+      title: "Success!",
+      description: "Your ad has been posted successfully.",
+    });
+    // The real-time subscription will automatically update the ads list
+  };
+
+  const handleCloseAdForm = () => {
+    setShowAdForm(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
-      <Navbar />
+      <Navbar onPostAd={handlePostAd} />
       
       {!selectedMessageUser && (
         <>
@@ -190,31 +220,43 @@ const Index = () => {
                     </span>
                   </h2>
                   
-                  <div className="flex bg-white rounded-lg shadow-md overflow-hidden">
+                  <div className="flex items-center gap-4">
+                    {/* Post Ad Button */}
                     <button
-                      onClick={() => setViewMode('list')}
-                      className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-                        viewMode === 'list'
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                      }`}
+                      onClick={handlePostAd}
+                      className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 font-medium"
                     >
-                      <List size={20} />
-                      <span className="hidden sm:inline">List View</span>
-                      <span className="sm:hidden">List</span>
+                      <Plus size={16} />
+                      <span className="hidden sm:inline">Post Ad</span>
                     </button>
-                    <button
-                      onClick={() => setViewMode('map')}
-                      className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-                        viewMode === 'map'
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                      }`}
-                    >
-                      <MapPin size={20} />
-                      <span className="hidden sm:inline">Map View</span>
-                      <span className="sm:hidden">Map</span>
-                    </button>
+
+                    {/* View Mode Toggle */}
+                    <div className="flex bg-white rounded-lg shadow-md overflow-hidden">
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                          viewMode === 'list'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <List size={20} />
+                        <span className="hidden sm:inline">List View</span>
+                        <span className="sm:hidden">List</span>
+                      </button>
+                      <button
+                        onClick={() => setViewMode('map')}
+                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                          viewMode === 'map'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <MapPin size={20} />
+                        <span className="hidden sm:inline">Map View</span>
+                        <span className="sm:hidden">Map</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -273,6 +315,14 @@ const Index = () => {
           userId={selectedUserProfile}
           onClose={handleCloseUserProfile}
           onMessage={handleMessageUser}
+        />
+      )}
+
+      {showAdForm && (
+        <AdForm
+          onClose={handleCloseAdForm}
+          userLocation={userLocation}
+          onAdAdded={handleAdAdded}
         />
       )}
 
