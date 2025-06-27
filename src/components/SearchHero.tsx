@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Phone, MapPin, X, Navigation } from 'lucide-react';
 
@@ -27,6 +28,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
   const [selectedEmergencyType, setSelectedEmergencyType] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ lat: 9.0320, lng: 38.7469 });
   const [nearestStations, setNearestStations] = useState<EmergencyStation[]>([]);
+  const [isLocationTracking, setIsLocationTracking] = useState(false);
 
   // Emergency stations in Addis Ababa
   const emergencyStations: EmergencyStation[] = [
@@ -123,9 +125,10 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
     return R * c;
   };
 
-  // Get user's real-time location
+  // Track user's real-time location continuously
   useEffect(() => {
     if (navigator.geolocation) {
+      // Get initial position
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const newLocation = {
@@ -133,21 +136,49 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
             lng: position.coords.longitude
           };
           setUserLocation(newLocation);
+          setIsLocationTracking(true);
+          console.log('Emergency hero location updated:', newLocation);
         },
         (error) => {
           console.log('Geolocation error:', error);
-          // Keep using default Addis Ababa location
+          setIsLocationTracking(false);
         },
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 300000
+          maximumAge: 60000
         }
       );
+
+      // Watch for continuous location changes
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(newLocation);
+          setIsLocationTracking(true);
+          console.log('Emergency hero location updated:', newLocation);
+        },
+        (error) => {
+          console.log('Geolocation watch error:', error);
+          setIsLocationTracking(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 30000 // 30 seconds
+        }
+      );
+
+      return () => {
+        navigator.geolocation.clearWatch(watchId);
+      };
     }
   }, []);
 
-  // Update nearest stations when emergency type is selected
+  // Update nearest stations when emergency type is selected or location changes
   useEffect(() => {
     if (selectedEmergencyType) {
       const filteredStations = emergencyStations
@@ -156,6 +187,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
           ...station,
           distance: calculateDistance(userLocation.lat, userLocation.lng, station.lat, station.lng)
         }))
+        .filter(station => (station.distance || 0) <= 5) // Only show stations within 5km
         .sort((a, b) => (a.distance || 0) - (b.distance || 0))
         .slice(0, 5); // Show top 5 nearest
       
@@ -220,9 +252,18 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
                 Emergency Services
               </h1>
             </div>
-            <p className="text-lg md:text-xl mb-12 opacity-90">
+            <p className="text-lg md:text-xl mb-8 opacity-90">
               Quick access to nearest emergency services in your area
             </p>
+            
+            {/* Location Status */}
+            <div className="mb-8 bg-white/10 backdrop-blur-sm rounded-2xl p-4 max-w-2xl mx-auto">
+              <div className="flex items-center justify-center gap-2 text-sm md:text-base">
+                <div className={`w-3 h-3 rounded-full ${isLocationTracking ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                <MapPin size={20} />
+                <span>{isLocationTracking ? 'Using your live location for accurate results' : 'Using default location'}</span>
+              </div>
+            </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-4xl mx-auto">
               {emergencyTypes.map((emergency) => (
@@ -235,13 +276,6 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
                   <span className="text-sm md:text-base font-bold">{emergency.label}</span>
                 </button>
               ))}
-            </div>
-
-            <div className="mt-12 bg-white/10 backdrop-blur-sm rounded-2xl p-6 max-w-2xl mx-auto">
-              <div className="flex items-center justify-center gap-2 text-sm md:text-base">
-                <MapPin size={20} />
-                <span>Using your live location for accurate results</span>
-              </div>
             </div>
           </div>
         ) : (
@@ -259,6 +293,14 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
                 <h2 className="text-2xl md:text-3xl font-bold">
                   Nearest {selectedEmergencyType} Stations
                 </h2>
+              </div>
+            </div>
+
+            {/* Location Status */}
+            <div className="mb-6 bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <div className="flex items-center justify-center gap-2 text-sm">
+                <div className={`w-2 h-2 rounded-full ${isLocationTracking ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                <span>{isLocationTracking ? 'Showing stations near your live location' : 'Showing stations near default location'}</span>
               </div>
             </div>
 
@@ -319,8 +361,11 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
 
             {nearestStations.length === 0 && (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-                <p className="text-white/80">Finding nearest {selectedEmergencyType.toLowerCase()} stations...</p>
+                <div className="text-white/80 mb-4">
+                  <span className="text-4xl mb-2 block">🔍</span>
+                  <p>No {selectedEmergencyType.toLowerCase()} stations found within 5km of your location.</p>
+                  <p className="text-sm mt-2 opacity-75">Try moving closer to the city center or check your location settings.</p>
+                </div>
               </div>
             )}
           </div>
