@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -34,8 +33,10 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const markersGroup = useRef<L.LayerGroup | null>(null);
+  const userMarker = useRef<L.Marker | null>(null);
   const [currentLocation, setCurrentLocation] = useState(initialUserLocation);
   const [isTracking, setIsTracking] = useState(false);
+  const [locationError, setLocationError] = useState<string>('');
 
   // Base emergency locations in Addis Ababa with actual phone numbers
   const baseEmergencyLocations = [
@@ -240,7 +241,6 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
     return R * c;
   };
 
-  // Filter emergency locations to only show those within 5km
   const getNearbyEmergencyLocations = (centerLat: number, centerLng: number) => {
     return baseEmergencyLocations.filter(location => {
       const distance = calculateDistance(centerLat, centerLng, location.lat, location.lng);
@@ -252,10 +252,18 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
     window.open(`tel:${phone}`, '_self');
   };
 
-  // Track user's real-time location continuously
+  // Enhanced real-time location tracking
   useEffect(() => {
-    if (navigator.geolocation) {
-      // Get initial position with high accuracy
+    let watchId: number;
+
+    const startLocationTracking = () => {
+      if (!navigator.geolocation) {
+        setLocationError('Geolocation is not supported by this browser');
+        setIsTracking(false);
+        return;
+      }
+
+      // Get initial high-accuracy position
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const newLocation = {
@@ -264,22 +272,23 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
           };
           setCurrentLocation(newLocation);
           setIsTracking(true);
-          console.log('Real-time location updated:', newLocation);
+          setLocationError('');
+          console.log('Initial location obtained:', newLocation);
         },
         (error) => {
-          console.log('Geolocation error:', error);
-          setCurrentLocation(initialUserLocation);
+          console.error('Geolocation error:', error);
+          setLocationError(error.message);
           setIsTracking(false);
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000 // 1 minute
+          timeout: 15000,
+          maximumAge: 0
         }
       );
 
-      // Watch for continuous location changes
-      const watchId = navigator.geolocation.watchPosition(
+      // Start continuous tracking
+      watchId = navigator.geolocation.watchPosition(
         (position) => {
           const newLocation = {
             lat: position.coords.latitude,
@@ -287,32 +296,36 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
           };
           setCurrentLocation(newLocation);
           setIsTracking(true);
+          setLocationError('');
           console.log('Location updated:', newLocation);
         },
         (error) => {
-          console.log('Geolocation watch error:', error);
+          console.error('Location tracking error:', error);
+          setLocationError(error.message);
           setIsTracking(false);
         },
         {
           enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 30000 // 30 seconds
+          timeout: 10000,
+          maximumAge: 30000
         }
       );
+    };
 
-      return () => {
+    startLocationTracking();
+
+    return () => {
+      if (watchId) {
         navigator.geolocation.clearWatch(watchId);
-      };
-    } else {
-      setCurrentLocation(initialUserLocation);
-      setIsTracking(false);
-    }
-  }, [initialUserLocation]);
+      }
+    };
+  }, []);
 
+  // Initialize map
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Initialize map with mobile-friendly settings
+    // Create map with better tile layer
     map.current = L.map(mapContainer.current, {
       zoomControl: true,
       scrollWheelZoom: true,
@@ -320,12 +333,14 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
       touchZoom: true,
       dragging: true,
       tapTolerance: 15
-    }).setView([currentLocation.lat, currentLocation.lng], 14);
+    }).setView([currentLocation.lat, currentLocation.lng], 15);
 
-    // Add OpenStreetMap tiles
+    // Use OpenStreetMap with better tile server
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
-      maxZoom: 19
+      maxZoom: 19,
+      tileSize: 256,
+      zoomOffset: 0
     }).addTo(map.current);
 
     // Create markers group
@@ -338,6 +353,7 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
     };
   }, []);
 
+  // Update map when location changes
   useEffect(() => {
     if (!map.current || !markersGroup.current) return;
 
@@ -345,19 +361,53 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
     markersGroup.current.clearLayers();
 
     // Update map center to current location
-    map.current.setView([currentLocation.lat, currentLocation.lng], 14);
+    map.current.setView([currentLocation.lat, currentLocation.lng], 15);
 
-    // Add user location marker with real-time tracking indicator
+    // Create animated user location marker
     const userIcon = L.divIcon({
-      html: `<div style="background: ${isTracking ? '#10b981' : '#3b82f6'}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); animation: pulse 2s infinite;"></div><style>@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(${isTracking ? '16, 185, 129' : '59, 130, 246'}, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(${isTracking ? '16, 185, 129' : '59, 130, 246'}, 0); } 100% { box-shadow: 0 0 0 0 rgba(${isTracking ? '16, 185, 129' : '59, 130, 246'}, 0); } }</style>`,
+      html: `
+        <div style="
+          background: ${isTracking ? '#10b981' : '#ef4444'}; 
+          width: 20px; 
+          height: 20px; 
+          border-radius: 50%; 
+          border: 3px solid white; 
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          position: relative;
+        ">
+          <div style="
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            width: 30px;
+            height: 30px;
+            border: 2px solid ${isTracking ? '#10b981' : '#ef4444'};
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            opacity: 0.6;
+          "></div>
+        </div>
+        <style>
+          @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 0.4; }
+            100% { transform: scale(0.8); opacity: 0.8; }
+          }
+        </style>
+      `,
       iconSize: [20, 20],
       className: 'user-location-marker'
     });
 
-    L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon })
+    userMarker.current = L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon })
       .addTo(markersGroup.current)
-      .bindPopup(`<strong>Your ${isTracking ? 'Live' : 'Current'} Location</strong>`)
-      .openPopup();
+      .bindPopup(`
+        <div style="text-align: center;">
+          <strong>${isTracking ? '📍 Live Location' : '📍 Current Location'}</strong><br>
+          <small>${isTracking ? 'Tracking active' : 'Using last known position'}</small>
+          ${locationError ? `<br><small style="color: red;">Error: ${locationError}</small>` : ''}
+        </div>
+      `);
 
     // Add distance circle
     L.circle([currentLocation.lat, currentLocation.lng], {
@@ -390,10 +440,8 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
         `);
     });
 
-    // Get only nearby emergency locations (within 5km)
+    // Get nearby emergency locations and add markers
     const nearbyEmergencyLocations = getNearbyEmergencyLocations(currentLocation.lat, currentLocation.lng);
-
-    // Add emergency location markers only for nearby stations
     nearbyEmergencyLocations.forEach((location) => {
       const emergencyIcon = L.divIcon({
         html: `<div style="background: #dc2626; color: white; width: 25px; height: 25px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px;">${location.icon}</div>`,
@@ -404,7 +452,6 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
       const marker = L.marker([location.lat, location.lng], { icon: emergencyIcon })
         .addTo(markersGroup.current!);
 
-      // Create popup content with call button
       const popupContent = document.createElement('div');
       popupContent.innerHTML = `
         <div style="text-align: center; max-width: 200px;">
@@ -419,7 +466,6 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
 
       marker.bindPopup(popupContent);
 
-      // Add click event to call button after popup opens
       marker.on('popupopen', () => {
         const callButton = document.getElementById(`call-${location.name.replace(/\s+/g, '-')}`);
         if (callButton) {
@@ -430,9 +476,8 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
       });
     });
 
-  }, [services, currentLocation, distanceFilter, isTracking]);
+  }, [services, currentLocation, distanceFilter, isTracking, locationError]);
 
-  // Get nearby emergency locations for the list display
   const nearbyEmergencyLocations = getNearbyEmergencyLocations(currentLocation.lat, currentLocation.lng);
 
   return (
@@ -441,17 +486,20 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
         <div ref={mapContainer} className="h-full w-full" />
       </div>
       
-      {/* Location Status */}
+      {/* Enhanced Location Status */}
       <div className="mt-2 mb-4 text-center">
-        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
-          isTracking ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+          isTracking ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
         }`}>
-          <div className={`w-2 h-2 rounded-full ${isTracking ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-          {isTracking ? 'Live Location Tracking' : 'Location Fixed'}
+          <div className={`w-3 h-3 rounded-full ${isTracking ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+          {isTracking ? '📍 Live Location Active' : '📍 Location Fixed'}
+          {locationError && (
+            <span className="text-xs text-red-600 ml-2">({locationError})</span>
+          )}
         </div>
       </div>
       
-      {/* Emergency Stations List - Only nearby stations */}
+      {/* Emergency Stations List */}
       <div className="mt-4 sm:mt-6 bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
         <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
           🆘 Emergency Contacts Near You ({nearbyEmergencyLocations.length} within 5km)
@@ -471,7 +519,7 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
                 </div>
                 <button
                   onClick={() => handleEmergencyCall(location.phone)}
-                  className="w-full bg-red-600 text-white py-2 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base font-medium btn-touch"
+                  className="w-full bg-red-600 text-white py-2 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base font-medium"
                 >
                   📞 {location.phone}
                 </button>

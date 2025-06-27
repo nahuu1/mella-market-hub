@@ -11,9 +11,14 @@ interface AdFormProps {
   onAdAdded: (ad: any) => void;
 }
 
-const categories = [
+const serviceCategories = [
   'Cleaning', 'Delivery', 'Tech Support', 'Home Repair', 'Tutoring',
   'Photography', 'Catering', 'Transportation', 'Beauty', 'Fitness'
+];
+
+const productCategories = [
+  'Electronics', 'Furniture', 'Clothing', 'Books', 'Sports Equipment',
+  'Musical Instruments', 'Home Appliances', 'Vehicles', 'Tools', 'Other'
 ];
 
 export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded }) => {
@@ -22,8 +27,9 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: categories[0],
+    category: serviceCategories[0],
     price: '',
+    type: 'service' as 'service' | 'sell' | 'rent'
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -85,6 +91,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
             image_url: imageUrl,
             location_lat: userLocation.lat + (Math.random() - 0.5) * 0.02,
             location_lng: userLocation.lng + (Math.random() - 0.5) * 0.02,
+            ad_type: formData.type
           }
         ])
         .select()
@@ -96,7 +103,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
 
       toast({
         title: "Success!",
-        description: "Your ad has been posted successfully.",
+        description: `Your ${formData.type === 'service' ? 'service' : formData.type === 'sell' ? 'product for sale' : 'rental item'} has been posted successfully.`,
       });
 
       onAdAdded(data);
@@ -113,11 +120,42 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
     }
   };
 
+  const getCurrentCategories = () => {
+    return formData.type === 'service' ? serviceCategories : productCategories;
+  };
+
+  const getFormTitle = () => {
+    switch (formData.type) {
+      case 'service': return 'Post a Service';
+      case 'sell': return 'Sell a Product';
+      case 'rent': return 'Rent a Product';
+      default: return 'Create Post';
+    }
+  };
+
+  const getPricePlaceholder = () => {
+    switch (formData.type) {
+      case 'service': return 'Service price (ETB)';
+      case 'sell': return 'Selling price (ETB)';
+      case 'rent': return 'Rental price per day (ETB)';
+      default: return '0.00';
+    }
+  };
+
+  const handleTypeChange = (newType: 'service' | 'sell' | 'rent') => {
+    const newCategories = newType === 'service' ? serviceCategories : productCategories;
+    setFormData({
+      ...formData,
+      type: newType,
+      category: newCategories[0]
+    });
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">Post an Ad</h2>
+          <h2 className="text-2xl font-bold text-gray-800">{getFormTitle()}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -127,9 +165,63 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Type Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              What would you like to post?
+            </label>
+            <div className="grid grid-cols-3 gap-4">
+              <button
+                type="button"
+                onClick={() => handleTypeChange('service')}
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  formData.type === 'service'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-2xl mb-2">🔧</div>
+                  <div className="font-semibold">Service</div>
+                  <div className="text-xs text-gray-500">Offer your skills</div>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('sell')}
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  formData.type === 'sell'
+                    ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
+                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-2xl mb-2">💰</div>
+                  <div className="font-semibold">Sell</div>
+                  <div className="text-xs text-gray-500">Sell your items</div>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('rent')}
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  formData.type === 'rent'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-md'
+                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-2xl mb-2">📅</div>
+                  <div className="font-semibold">Rent</div>
+                  <div className="text-xs text-gray-500">Rent your items</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title
+              {formData.type === 'service' ? 'Service Title' : 'Product Title'}
             </label>
             <input
               type="text"
@@ -137,7 +229,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="e.g., Professional House Cleaning"
+              placeholder={formData.type === 'service' ? 'e.g., Professional House Cleaning' : 'e.g., iPhone 13 Pro Max'}
             />
           </div>
 
@@ -151,7 +243,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              placeholder="Describe your service in detail..."
+              placeholder={formData.type === 'service' ? 'Describe your service in detail...' : 'Describe your product, condition, etc...'}
             />
           </div>
 
@@ -165,7 +257,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
-                {categories.map((category) => (
+                {getCurrentCategories().map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -175,7 +267,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Price (ETB)
+                Price {formData.type === 'rent' && '(per day)'}
               </label>
               <div className="relative">
                 <DollarSign size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -187,7 +279,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="0.00"
+                  placeholder={getPricePlaceholder()}
                 />
               </div>
             </div>
@@ -195,7 +287,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Image
+              {formData.type === 'service' ? 'Service Image' : 'Product Image'}
             </label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-500 transition-colors">
               <input
@@ -228,7 +320,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
             <div>
               <h4 className="font-medium text-blue-900">Location Information</h4>
               <p className="text-sm text-blue-700">
-                Your ad will be visible to customers within 10km of your current location.
+                Your {formData.type === 'service' ? 'service' : 'product'} will be visible to users within 5km of your current location.
               </p>
             </div>
           </div>
@@ -246,7 +338,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
               disabled={loading}
               className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Posting...' : 'Post Ad'}
+              {loading ? 'Posting...' : `Post ${formData.type === 'service' ? 'Service' : formData.type === 'sell' ? 'for Sale' : 'for Rent'}`}
             </button>
           </div>
         </form>
