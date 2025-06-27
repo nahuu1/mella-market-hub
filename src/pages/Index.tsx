@@ -43,7 +43,7 @@ const Index = () => {
   const { toast } = useToast();
   const { ads, loading, searchAds } = useRealTimeAds();
   const [selectedCategory, setSelectedCategory] = useLocalStorage('selectedCategory', 'all');
-  const [distanceFilter, setDistanceFilter] = useLocalStorage('distanceFilter', 25);
+  const [distanceFilter, setDistanceFilter] = useLocalStorage('distanceFilter', 5); // Default to 5km max
   const [viewMode, setViewMode] = useLocalStorage('viewMode', 'list');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedMessageUser, setSelectedMessageUser] = useState<{
@@ -56,31 +56,56 @@ const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdForm, setShowAdForm] = useState(false);
-  
-  // User location for Addis Ababa
-  const userLocation = { lat: 9.0320, lng: 38.7469 };
+  const [userLocation, setUserLocation] = useState({ lat: 9.0320, lng: 38.7469 }); // Default to Addis Ababa
+
+  // Get user's real-time location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.log('Geolocation error:', error);
+          // Keep default location if geolocation fails
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+    }
+  }, []);
 
   // Transform ads data to match Service interface
   const transformAdsToServices = (adsData: any[]): Service[] => {
-    return adsData.map(ad => ({
-      id: ad.id,
-      title: ad.title,
-      description: ad.description,
-      price: Number(ad.price),
-      category: ad.category,
-      provider: ad.profiles?.full_name || 'Unknown Provider',
-      rating: ad.profiles?.rating || 0,
-      distance: ad.location_lat && ad.location_lng 
+    return adsData.map(ad => {
+      const distance = ad.location_lat && ad.location_lng 
         ? calculateDistance(userLocation.lat, userLocation.lng, ad.location_lat, ad.location_lng)
-        : 0,
-      image: ad.image_url || '/placeholder.svg',
-      location: {
-        lat: ad.location_lat || userLocation.lat,
-        lng: ad.location_lng || userLocation.lng
-      },
-      user_id: ad.user_id,
-      profiles: ad.profiles
-    }));
+        : 0;
+      
+      return {
+        id: ad.id,
+        title: ad.title,
+        description: ad.description,
+        price: Number(ad.price),
+        category: ad.category,
+        provider: ad.profiles?.full_name || 'Unknown Provider',
+        rating: ad.profiles?.rating || 0,
+        distance: distance,
+        image: ad.image_url || '/placeholder.svg',
+        location: {
+          lat: ad.location_lat || userLocation.lat,
+          lng: ad.location_lng || userLocation.lng
+        },
+        user_id: ad.user_id,
+        profiles: ad.profiles
+      };
+    }).filter(service => service.distance <= distanceFilter); // Only show posts within distance filter
   };
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -99,8 +124,7 @@ const Index = () => {
 
   const filteredServices = services.filter(service => {
     const categoryMatch = selectedCategory === 'all' || service.category === selectedCategory;
-    const distanceMatch = service.distance <= distanceFilter;
-    return categoryMatch && distanceMatch;
+    return categoryMatch;
   });
 
   const handleSearch = async (query: string, location?: { lat: number; lng: number }, radius?: number) => {
@@ -143,7 +167,7 @@ const Index = () => {
     if (!user) {
       toast({
         title: "Authentication Required",
-        description: "Please sign in to post an ad.",
+        description: "Please sign in to share a post.",
         variant: "destructive",
       });
       navigate('/auth');
@@ -156,7 +180,7 @@ const Index = () => {
     setShowAdForm(false);
     toast({
       title: "Success!",
-      description: "Your ad has been posted successfully.",
+      description: "Your post has been shared successfully.",
     });
     // The real-time subscription will automatically update the ads list
   };
@@ -166,7 +190,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       <Navbar onPostAd={handlePostAd} />
       
       {!selectedMessageUser && (
@@ -214,9 +238,9 @@ const Index = () => {
               <div className="lg:col-span-3">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">
-                    {isSearching ? 'Search Results' : 'Available Services'}
+                    {isSearching ? 'Search Results' : 'Community Posts'}
                     <span className="text-lg font-normal text-gray-600 ml-2">
-                      ({filteredServices.length} services)
+                      ({filteredServices.length} posts within {distanceFilter}km)
                     </span>
                   </h2>
                   
@@ -227,7 +251,7 @@ const Index = () => {
                       className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 font-medium"
                     >
                       <Plus size={16} />
-                      <span className="hidden sm:inline">Post Ad</span>
+                      <span className="hidden sm:inline">Share Post</span>
                     </button>
 
                     {/* View Mode Toggle */}
@@ -236,7 +260,7 @@ const Index = () => {
                         onClick={() => setViewMode('list')}
                         className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
                           viewMode === 'list'
-                            ? 'bg-green-600 text-white'
+                            ? 'bg-orange-500 text-white'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                         }`}
                       >
@@ -248,7 +272,7 @@ const Index = () => {
                         onClick={() => setViewMode('map')}
                         className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
                           viewMode === 'map'
-                            ? 'bg-green-600 text-white'
+                            ? 'bg-orange-500 text-white'
                             : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                         }`}
                       >
@@ -262,8 +286,8 @@ const Index = () => {
 
                 {loading ? (
                   <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading services...</p>
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading community posts...</p>
                   </div>
                 ) : (
                   <>

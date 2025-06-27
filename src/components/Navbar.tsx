@@ -42,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onPostAd }) => {
 
   return (
     <>
-      <nav className="bg-white shadow-lg border-b-4 border-green-600 sticky top-0 z-40">
+      <nav className="bg-white shadow-lg border-b-4 border-orange-500 sticky top-0 z-40">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -50,12 +50,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onPostAd }) => {
               className="flex items-center space-x-3 cursor-pointer"
               onClick={() => navigate('/')}
             >
-              <div className="bg-green-600 text-white p-2 rounded-lg">
+              <div className="bg-orange-500 text-white p-2 rounded-lg">
                 <Home size={24} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">ServiceHub</h1>
-                <p className="text-xs text-gray-600">Ethiopia's Service Marketplace</p>
+                <h1 className="text-xl font-bold text-gray-800">Mella</h1>
+                <p className="text-xs text-gray-600">Connect. Share. Discover.</p>
               </div>
             </div>
 
@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onPostAd }) => {
                     onClick={() => navigate('/messages')}
                     className={`p-2 rounded-full transition-colors ${
                       isActive('/messages')
-                        ? 'bg-green-100 text-green-600'
+                        ? 'bg-orange-100 text-orange-600'
                         : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                     }`}
                   >
@@ -86,10 +86,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onPostAd }) => {
                   {/* Post Ad */}
                   <button
                     onClick={handlePostAd}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                    className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
                   >
                     <Plus size={16} />
-                    <span className="hidden sm:inline">Post Ad</span>
+                    <span className="hidden sm:inline">Share</span>
                   </button>
 
                   {/* Profile Dropdown */}
@@ -105,8 +105,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onPostAd }) => {
                           className="w-8 h-8 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <User size={16} className="text-green-600" />
+                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                          <User size={16} className="text-orange-600" />
                         </div>
                       )}
                       <span className="hidden md:block text-sm font-medium text-gray-700">
@@ -153,9 +153,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onPostAd }) => {
                   </button>
                   <button
                     onClick={() => navigate('/auth')}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                    className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
                   >
-                    Get Started
+                    Join Mella
                   </button>
                 </div>
               )}

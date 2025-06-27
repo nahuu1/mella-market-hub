@@ -25,7 +25,7 @@ export const useRealTimeAds = () => {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchAds = async () => {
+  const fetchAds = async (userLocation?: { lat: number; lng: number }, maxDistance: number = 5) => {
     try {
       const { data, error } = await supabase
         .from('ads')
@@ -45,8 +45,8 @@ export const useRealTimeAds = () => {
         return;
       }
 
-      // Transform the data to match our Ad interface
-      const transformedAds = (data || []).map(ad => ({
+      // Transform the data
+      let transformedAds = (data || []).map(ad => ({
         ...ad,
         profiles: ad.profiles && typeof ad.profiles === 'object' && 'full_name' in ad.profiles ? {
           full_name: ad.profiles.full_name || '',
@@ -54,6 +54,22 @@ export const useRealTimeAds = () => {
           profile_image_url: ad.profiles.profile_image_url || ''
         } : null
       }));
+
+      // Filter by distance if user location is available
+      if (userLocation) {
+        transformedAds = transformedAds.filter(ad => {
+          if (!ad.location_lat || !ad.location_lng) return false;
+          
+          const distance = calculateDistance(
+            userLocation.lat,
+            userLocation.lng,
+            ad.location_lat,
+            ad.location_lng
+          );
+          
+          return distance <= maxDistance;
+        });
+      }
 
       setAds(transformedAds);
     } catch (error) {
@@ -64,7 +80,24 @@ export const useRealTimeAds = () => {
   };
 
   useEffect(() => {
-    fetchAds();
+    // Get user location and fetch ads
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          fetchAds(userLocation, 5); // 5km max distance
+        },
+        (error) => {
+          console.log('Geolocation error:', error);
+          fetchAds(); // Fetch without location filter
+        }
+      );
+    } else {
+      fetchAds(); // Fetch without location filter
+    }
 
     // Set up real-time subscription for ads
     const channel = supabase
@@ -78,7 +111,21 @@ export const useRealTimeAds = () => {
         },
         (payload) => {
           console.log('Real-time ads update:', payload);
-          fetchAds(); // Refetch to get complete data with profiles
+          // Refetch with current location constraints
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                const userLocation = {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                };
+                fetchAds(userLocation, 5);
+              },
+              () => fetchAds()
+            );
+          } else {
+            fetchAds();
+          }
         }
       )
       .subscribe();
@@ -115,7 +162,7 @@ export const useRealTimeAds = () => {
 
       let filteredData = data || [];
 
-      // Transform the data to match our Ad interface
+      // Transform the data
       const transformedAds = filteredData.map(ad => ({
         ...ad,
         profiles: ad.profiles && typeof ad.profiles === 'object' && 'full_name' in ad.profiles ? {
@@ -125,8 +172,9 @@ export const useRealTimeAds = () => {
         } : null
       }));
 
-      // Filter by location if provided
-      if (location && radius && transformedAds.length > 0) {
+      // Filter by location if provided, with max 5km limit
+      if (location && transformedAds.length > 0) {
+        const maxRadius = Math.min(radius || 5, 5); // Ensure max 5km
         return transformedAds.filter(ad => {
           if (!ad.location_lat || !ad.location_lng) return false;
           
@@ -137,7 +185,7 @@ export const useRealTimeAds = () => {
             ad.location_lng
           );
           
-          return distance <= radius;
+          return distance <= maxRadius;
         });
       }
 
