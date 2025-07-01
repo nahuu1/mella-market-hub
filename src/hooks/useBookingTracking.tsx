@@ -13,7 +13,7 @@ interface BookingWithTracking {
   provider_location_lat?: number;
   provider_location_lng?: number;
   eta_minutes?: number;
-  status_history: any;
+  status_history: any[];
   payment_method?: string;
   payment_status: string;
   total_amount?: number;
@@ -48,16 +48,36 @@ export const useBookingTracking = () => {
         .from('bookings')
         .select(`
           *,
-          ad:ad_id (title, price),
-          worker:worker_id (full_name, phone_number, profile_image_url),
-          customer:customer_id (full_name, phone_number)
+          ad:ads!inner(title, price),
+          worker:profiles!bookings_worker_id_fkey(full_name, phone_number, profile_image_url),
+          customer:profiles!bookings_customer_id_fkey(full_name, phone_number)
         `)
         .or(`customer_id.eq.${user.id},worker_id.eq.${user.id}`)
         .in('status', ['pending', 'accepted', 'in_progress', 'en_route'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setActiveBookings((data || []) as BookingWithTracking[]);
+      
+      // Transform the data to match our interface
+      const transformedBookings = (data || []).map(booking => ({
+        ...booking,
+        status_history: Array.isArray(booking.status_history) ? booking.status_history : [],
+        ad: {
+          title: booking.ad?.title || 'Unknown Service',
+          price: booking.ad?.price || 0
+        },
+        worker: {
+          full_name: booking.worker?.full_name || 'Unknown Worker',
+          phone_number: booking.worker?.phone_number,
+          profile_image_url: booking.worker?.profile_image_url
+        },
+        customer: {
+          full_name: booking.customer?.full_name || 'Unknown Customer',
+          phone_number: booking.customer?.phone_number
+        }
+      }));
+      
+      setActiveBookings(transformedBookings);
     } catch (error) {
       console.error('Error fetching bookings:', error);
     } finally {

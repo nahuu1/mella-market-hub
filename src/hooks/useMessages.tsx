@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,7 +73,7 @@ export const useMessages = () => {
               full_name: profile?.full_name || 'Unknown User', 
               profile_image_url: profile?.profile_image_url || '',
               is_verified: profile?.is_verified || false,
-              badges: Array.isArray(profile?.badges) ? profile.badges : []
+              badges: Array.isArray(profile?.badges) ? profile.badges.filter((badge): badge is string => typeof badge === 'string') : []
             }
           };
         })
