@@ -18,6 +18,8 @@ interface Service {
     full_name: string;
     rating: number;
     profile_image_url: string;
+    is_verified?: boolean;
+    badges?: string[];
   };
 }
 
@@ -26,13 +28,15 @@ interface ServiceGridProps {
   onBook?: (service: Service) => void;
   onMessage?: (userId: string, userName: string) => void;
   onUserProfileClick?: (userId: string) => void;
+  onPostClick?: (service: Service) => void;
 }
 
 export const ServiceGrid: React.FC<ServiceGridProps> = ({ 
   services, 
   onBook, 
   onMessage, 
-  onUserProfileClick 
+  onUserProfileClick,
+  onPostClick
 }) => {
   if (services.length === 0) {
     return (
@@ -53,6 +57,7 @@ export const ServiceGrid: React.FC<ServiceGridProps> = ({
           onBook={onBook}
           onMessage={onMessage}
           onUserProfileClick={onUserProfileClick}
+          onPostClick={onPostClick}
         />
       ))}
     </div>

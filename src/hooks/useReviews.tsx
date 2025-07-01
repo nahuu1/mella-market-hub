@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -8,28 +8,37 @@ interface Review {
   id: string;
   reviewer_id: string;
   reviewee_id: string;
-  booking_id?: string;
   rating: number;
   title?: string;
   comment?: string;
+  created_at: string;
+  updated_at: string;
   response?: string;
   response_date?: string;
   helpful_count: number;
-  created_at: string;
-  updated_at: string;
+  booking_id?: string;
   reviewer: {
     full_name: string;
     profile_image_url?: string;
   };
 }
 
+interface CreateReviewData {
+  reviewee_id: string;
+  rating: number;
+  title?: string;
+  comment?: string;
+  booking_id?: string;
+}
+
 export const useReviews = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const fetchReviews = async (userId: string) => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('reviews')
@@ -41,53 +50,56 @@ export const useReviews = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       // Transform the data to match our interface
-      const transformedReviews = (data || []).map(review => {
-        const reviewerData = Array.isArray(review.reviewer) ? review.reviewer[0] : review.reviewer;
-        
-        return {
-          ...review,
-          reviewer: {
-            full_name: reviewerData?.full_name || 'Anonymous',
-            profile_image_url: reviewerData?.profile_image_url
-          }
-        };
-      });
-      
+      const transformedReviews = (data || []).map(review => ({
+        ...review,
+        reviewer: {
+          full_name: review.reviewer?.full_name || 'Anonymous',
+          profile_image_url: review.reviewer?.profile_image_url
+        }
+      }));
+
       setReviews(transformedReviews);
     } catch (error) {
       console.error('Error fetching reviews:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load reviews",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const createReview = async (reviewData: {
-    reviewee_id: string;
-    booking_id?: string;
-    rating: number;
-    title?: string;
-    comment?: string;
-  }) => {
-    if (!user) return false;
+  const createReview = async (reviewData: CreateReviewData) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to write a review",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const { error } = await supabase
         .from('reviews')
         .insert({
-          reviewer_id: user.id,
-          ...reviewData
+          ...reviewData,
+          reviewer_id: user.id
         });
 
       if (error) throw error;
 
       toast({
-        title: "Review submitted",
-        description: "Thank you for your feedback!",
+        title: "Success",
+        description: "Your review has been submitted",
       });
 
-      return true;
+      // Refresh reviews
+      await fetchReviews(reviewData.reviewee_id);
     } catch (error) {
       console.error('Error creating review:', error);
       toast({
@@ -95,29 +107,25 @@ export const useReviews = () => {
         description: "Failed to submit review",
         variant: "destructive",
       });
-      return false;
     }
   };
 
-  const updateReview = async (reviewId: string, updates: {
-    rating?: number;
-    title?: string;
-    comment?: string;
-  }) => {
+  const updateReview = async (reviewId: string, updates: Partial<CreateReviewData>) => {
+    if (!user) return;
+
     try {
       const { error } = await supabase
         .from('reviews')
         .update(updates)
-        .eq('id', reviewId);
+        .eq('id', reviewId)
+        .eq('reviewer_id', user.id);
 
       if (error) throw error;
 
       toast({
-        title: "Review updated",
-        description: "Your review has been updated successfully",
+        title: "Success",
+        description: "Review updated successfully",
       });
-
-      return true;
     } catch (error) {
       console.error('Error updating review:', error);
       toast({
@@ -125,11 +133,40 @@ export const useReviews = () => {
         description: "Failed to update review",
         variant: "destructive",
       });
-      return false;
+    }
+  };
+
+  const markHelpful = async (reviewId: string) => {
+    try {
+      // First get current helpful count
+      const { data: review } = await supabase
+        .from('reviews')
+        .select('helpful_count')
+        .eq('id', reviewId)
+        .single();
+
+      if (!review) return;
+
+      const { error } = await supabase
+        .from('reviews')
+        .update({ helpful_count: (review.helpful_count || 0) + 1 })
+        .eq('id', reviewId);
+
+      if (error) throw error;
+
+      // Refresh reviews to show updated count
+      const currentRevieweeId = reviews.find(r => r.id === reviewId)?.reviewee_id;
+      if (currentRevieweeId) {
+        await fetchReviews(currentRevieweeId);
+      }
+    } catch (error) {
+      console.error('Error marking review as helpful:', error);
     }
   };
 
   const addResponse = async (reviewId: string, response: string) => {
+    if (!user) return;
+
     try {
       const { error } = await supabase
         .from('reviews')
@@ -142,11 +179,15 @@ export const useReviews = () => {
       if (error) throw error;
 
       toast({
-        title: "Response added",
-        description: "Your response has been added to the review",
+        title: "Success",
+        description: "Response added successfully",
       });
 
-      return true;
+      // Refresh reviews to show the response
+      const currentRevieweeId = reviews.find(r => r.id === reviewId)?.reviewee_id;
+      if (currentRevieweeId) {
+        await fetchReviews(currentRevieweeId);
+      }
     } catch (error) {
       console.error('Error adding response:', error);
       toast({
@@ -154,24 +195,6 @@ export const useReviews = () => {
         description: "Failed to add response",
         variant: "destructive",
       });
-      return false;
-    }
-  };
-
-  const markHelpful = async (reviewId: string) => {
-    try {
-      const { error } = await supabase.rpc('increment_helpful_count', {
-        review_id: reviewId
-      });
-
-      if (error) throw error;
-
-      // Refresh reviews to show updated count
-      if (reviews.length > 0) {
-        fetchReviews(reviews[0].reviewee_id);
-      }
-    } catch (error) {
-      console.error('Error marking review as helpful:', error);
     }
   };
 
@@ -181,7 +204,7 @@ export const useReviews = () => {
     fetchReviews,
     createReview,
     updateReview,
-    addResponse,
-    markHelpful
+    markHelpful,
+    addResponse
   };
 };

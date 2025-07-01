@@ -350,6 +350,7 @@ export type Database = {
           rating: number | null
           total_ratings: number | null
           updated_at: string | null
+          user_type: string | null
           verification_type: string | null
         }
         Insert: {
@@ -366,6 +367,7 @@ export type Database = {
           rating?: number | null
           total_ratings?: number | null
           updated_at?: string | null
+          user_type?: string | null
           verification_type?: string | null
         }
         Update: {
@@ -382,6 +384,7 @@ export type Database = {
           rating?: number | null
           total_ratings?: number | null
           updated_at?: string | null
+          user_type?: string | null
           verification_type?: string | null
         }
         Relationships: []
