@@ -13,7 +13,7 @@ interface BookingWithTracking {
   provider_location_lat?: number;
   provider_location_lng?: number;
   eta_minutes?: number;
-  status_history: any[];
+  status_history: any;
   payment_method?: string;
   payment_status: string;
   total_amount?: number;
@@ -57,7 +57,7 @@ export const useBookingTracking = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setActiveBookings(data || []);
+      setActiveBookings((data || []) as BookingWithTracking[]);
     } catch (error) {
       console.error('Error fetching bookings:', error);
     } finally {
@@ -67,14 +67,28 @@ export const useBookingTracking = () => {
 
   const updateBookingStatus = async (bookingId: string, newStatus: string, location?: { lat: number; lng: number }) => {
     try {
-      const updateData: any = {
+      const statusUpdate = {
         status: newStatus,
-        status_history: supabase.sql`status_history || ${JSON.stringify([{
-          status: newStatus,
-          timestamp: new Date().toISOString(),
-          updated_by: user?.id
-        }])}`
+        timestamp: new Date().toISOString(),
+        updated_by: user?.id
       };
+
+      const updateData: any = {
+        status: newStatus
+      };
+
+      // Get current status history
+      const { data: currentBooking } = await supabase
+        .from('bookings')
+        .select('status_history')
+        .eq('id', bookingId)
+        .single();
+
+      const currentHistory = Array.isArray(currentBooking?.status_history) 
+        ? currentBooking.status_history 
+        : [];
+
+      updateData.status_history = [...currentHistory, statusUpdate];
 
       if (location) {
         updateData.provider_location_lat = location.lat;

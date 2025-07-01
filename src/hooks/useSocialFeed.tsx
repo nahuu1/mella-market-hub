@@ -40,7 +40,19 @@ export const useSocialFeed = () => {
         .limit(50);
 
       if (error) throw error;
-      setActivities(data || []);
+      
+      // Transform the data to match our interface
+      const transformedActivities = (data || []).map(activity => ({
+        ...activity,
+        user: {
+          full_name: activity.user?.full_name || 'Unknown User',
+          profile_image_url: activity.user?.profile_image_url,
+          is_verified: activity.user?.is_verified || false,
+          badges: Array.isArray(activity.user?.badges) ? activity.user.badges : []
+        }
+      }));
+      
+      setActivities(transformedActivities as FeedActivity[]);
     } catch (error) {
       console.error('Error fetching feed:', error);
     } finally {

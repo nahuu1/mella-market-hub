@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,12 +67,12 @@ export const useMessages = () => {
 
           return {
             ...conv,
-            other_user: profile || { 
+            other_user: {
               id: otherUserId, 
-              full_name: 'Unknown User', 
-              profile_image_url: '',
-              is_verified: false,
-              badges: []
+              full_name: profile?.full_name || 'Unknown User', 
+              profile_image_url: profile?.profile_image_url || '',
+              is_verified: profile?.is_verified || false,
+              badges: Array.isArray(profile?.badges) ? profile.badges : []
             }
           };
         })
