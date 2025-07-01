@@ -11,6 +11,7 @@ import Profile from "./pages/Profile";
 import AddCertification from "./pages/AddCertification";
 import NotFound from "./pages/NotFound";
 import Messages from "./pages/Messages";
+import WorkerDashboard from "./pages/WorkerDashboard";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/add-certification" element={<AddCertification />} />
             <Route path="/messages" element={<Messages />} />
+            <Route path="/worker-dashboard" element={<WorkerDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -10,6 +10,7 @@ import { BookingModal } from '@/components/BookingModal';
 import { MessageThread } from '@/components/MessageThread';
 import { UserProfileModal } from '@/components/UserProfile';
 import { AdForm } from '@/components/AdForm';
+import { PostModal } from '@/components/PostModal';
 import { Footer } from '@/components/Footer';
 import { useRealTimeAds } from '@/hooks/useRealTimeAds';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -34,6 +35,8 @@ interface Service {
     full_name: string;
     rating: number;
     profile_image_url: string;
+    is_verified?: boolean;
+    badges?: string[];
   };
 }
 
@@ -46,6 +49,7 @@ const Index = () => {
   const [distanceFilter, setDistanceFilter] = useLocalStorage('distanceFilter', 5); // Default to 5km max
   const [viewMode, setViewMode] = useLocalStorage('viewMode', 'list');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedPost, setSelectedPost] = useState<Service | null>(null);
   const [selectedMessageUser, setSelectedMessageUser] = useState<{
     id: string;
     name: string;
@@ -138,6 +142,10 @@ const Index = () => {
     setSearchResults([]);
   };
 
+  const handlePostClick = (service: Service) => {
+    setSelectedPost(service);
+  };
+
   const handleBookService = (service: Service) => {
     setSelectedService(service);
   };
@@ -149,6 +157,10 @@ const Index = () => {
   const handleUserProfileClick = (userId: string) => {
     console.log('Opening user profile for:', userId);
     setSelectedUserProfile(userId);
+  };
+
+  const handleClosePost = () => {
+    setSelectedPost(null);
   };
 
   const handleCloseBooking = () => {
@@ -297,6 +309,7 @@ const Index = () => {
                         onBook={handleBookService}
                         onMessage={handleMessageUser}
                         onUserProfileClick={handleUserProfileClick}
+                        onPostClick={handlePostClick}
                       />
                     ) : (
                       <MapView
@@ -324,6 +337,22 @@ const Index = () => {
             />
           </div>
         </div>
+      )}
+
+      {selectedPost && (
+        <PostModal
+          isOpen={!!selectedPost}
+          onClose={handleClosePost}
+          post={selectedPost}
+          onBook={() => {
+            handleClosePost();
+            handleBookService(selectedPost);
+          }}
+          onMessage={() => {
+            handleClosePost();
+            handleMessageUser(selectedPost.user_id, selectedPost.provider, selectedPost.profiles?.profile_image_url);
+          }}
+        />
       )}
 
       {selectedService && (

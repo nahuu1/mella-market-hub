@@ -2,14 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Briefcase, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [userType, setUserType] = useState<'user' | 'worker'>('user');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -19,9 +21,31 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      // Check if user is a worker and redirect accordingly
+      checkUserTypeAndRedirect();
     }
   }, [user, navigate]);
+
+  const checkUserTypeAndRedirect = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.user_type === 'worker') {
+        navigate('/worker-dashboard');
+      } else {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Error checking user type:', error);
+      navigate('/');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +57,12 @@ const Auth = () => {
         const result = await signUp(email, password, fullName);
         error = result.error;
         if (!error) {
+          // Update profile with user type
+          await supabase
+            .from('profiles')
+            .update({ user_type: userType })
+            .eq('email', email);
+          
           toast({
             title: "Success!",
             description: "Please check your email to confirm your account.",
@@ -84,22 +114,56 @@ const Auth = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {isSignUp && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <User size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="Enter your full name"
-                />
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Account Type
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setUserType('user')}
+                    className={`flex items-center justify-center gap-2 p-3 border rounded-lg transition-colors ${
+                      userType === 'user'
+                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Users size={20} />
+                    <span className="font-medium">Customer</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUserType('worker')}
+                    className={`flex items-center justify-center gap-2 p-3 border rounded-lg transition-colors ${
+                      userType === 'worker'
+                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Briefcase size={20} />
+                    <span className="font-medium">Service Provider</span>
+                  </button>
+                </div>
               </div>
-            </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           <div>

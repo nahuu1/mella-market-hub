@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,23 +58,28 @@ export const useBookingTracking = () => {
       if (error) throw error;
       
       // Transform the data to match our interface
-      const transformedBookings = (data || []).map(booking => ({
-        ...booking,
-        status_history: Array.isArray(booking.status_history) ? booking.status_history : [],
-        ad: {
-          title: booking.ad?.title || 'Unknown Service',
-          price: booking.ad?.price || 0
-        },
-        worker: {
-          full_name: booking.worker?.full_name || 'Unknown Worker',
-          phone_number: booking.worker?.phone_number,
-          profile_image_url: booking.worker?.profile_image_url
-        },
-        customer: {
-          full_name: booking.customer?.full_name || 'Unknown Customer',
-          phone_number: booking.customer?.phone_number
-        }
-      }));
+      const transformedBookings = (data || []).map(booking => {
+        const workerData = Array.isArray(booking.worker) ? booking.worker[0] : booking.worker;
+        const customerData = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer;
+        
+        return {
+          ...booking,
+          status_history: Array.isArray(booking.status_history) ? booking.status_history : [],
+          ad: {
+            title: booking.ad?.title || 'Unknown Service',
+            price: booking.ad?.price || 0
+          },
+          worker: {
+            full_name: workerData?.full_name || 'Unknown Worker',
+            phone_number: workerData?.phone_number,
+            profile_image_url: workerData?.profile_image_url
+          },
+          customer: {
+            full_name: customerData?.full_name || 'Unknown Customer',
+            phone_number: customerData?.phone_number
+          }
+        };
+      });
       
       setActiveBookings(transformedBookings);
     } catch (error) {
