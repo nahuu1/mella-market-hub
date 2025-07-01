@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSocialFeed } from './useSocialFeed';
 
 interface BookingData {
   adId: string;
@@ -14,6 +15,7 @@ interface BookingData {
 export const useBookings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { createActivity } = useSocialFeed();
   const [loading, setLoading] = useState(false);
 
   const createBooking = async (bookingData: BookingData) => {
@@ -55,7 +57,9 @@ export const useBookings = () => {
           customer_id: user.id,
           worker_id: bookingData.workerId,
           message: bookingData.message,
-          service_date: bookingData.serviceDate
+          service_date: bookingData.serviceDate,
+          total_amount: adData.price,
+          payment_status: 'pending'
         }])
         .select()
         .single();
@@ -87,6 +91,13 @@ export const useBookings = () => {
             service_date: bookingData.serviceDate
           }
         }]);
+
+      // Create social feed activity
+      createActivity('new_booking', {
+        service_title: adData.title,
+        service_price: adData.price,
+        worker_id: bookingData.workerId
+      }, 'public');
 
       toast({
         title: "Booking request sent!",

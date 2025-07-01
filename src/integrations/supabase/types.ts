@@ -71,10 +71,18 @@ export type Database = {
           booking_date: string | null
           created_at: string | null
           customer_id: string
+          emergency_contact: Json | null
+          eta_minutes: number | null
           id: string
           message: string | null
+          payment_method: string | null
+          payment_status: string | null
+          provider_location_lat: number | null
+          provider_location_lng: number | null
           service_date: string | null
           status: string | null
+          status_history: Json | null
+          total_amount: number | null
           worker_id: string
         }
         Insert: {
@@ -82,10 +90,18 @@ export type Database = {
           booking_date?: string | null
           created_at?: string | null
           customer_id: string
+          emergency_contact?: Json | null
+          eta_minutes?: number | null
           id?: string
           message?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          provider_location_lat?: number | null
+          provider_location_lng?: number | null
           service_date?: string | null
           status?: string | null
+          status_history?: Json | null
+          total_amount?: number | null
           worker_id: string
         }
         Update: {
@@ -93,10 +109,18 @@ export type Database = {
           booking_date?: string | null
           created_at?: string | null
           customer_id?: string
+          emergency_contact?: Json | null
+          eta_minutes?: number | null
           id?: string
           message?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          provider_location_lat?: number | null
+          provider_location_lng?: number | null
           service_date?: string | null
           status?: string | null
+          status_history?: Json | null
+          total_amount?: number | null
           worker_id?: string
         }
         Relationships: [
@@ -145,13 +169,50 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_activities: {
+        Row: {
+          activity_type: string
+          content: Json
+          created_at: string | null
+          id: string
+          user_id: string
+          visibility: string | null
+        }
+        Insert: {
+          activity_type: string
+          content: Json
+          created_at?: string | null
+          id?: string
+          user_id: string
+          visibility?: string | null
+        }
+        Update: {
+          activity_type?: string
+          content?: Json
+          created_at?: string | null
+          id?: string
+          user_id?: string
+          visibility?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
           created_at: string
           id: string
+          message_type: string | null
           read: boolean | null
           receiver_id: string
+          reply_to_message_id: string | null
           sender_id: string
           updated_at: string
         }
@@ -159,8 +220,10 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          message_type?: string | null
           read?: boolean | null
           receiver_id: string
+          reply_to_message_id?: string | null
           sender_id: string
           updated_at?: string
         }
@@ -168,12 +231,22 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          message_type?: string | null
           read?: boolean | null
           receiver_id?: string
+          reply_to_message_id?: string | null
           sender_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -208,47 +281,248 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_transactions: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string | null
+          currency: string | null
+          id: string
+          payment_method: string
+          status: string | null
+          transaction_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          payment_method: string
+          status?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          payment_method?: string
+          status?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          badges: Json | null
           bio: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string
+          is_verified: boolean | null
           phone_number: string | null
           profile_image_url: string | null
           rating: number | null
           total_ratings: number | null
           updated_at: string | null
+          verification_type: string | null
         }
         Insert: {
           avatar_url?: string | null
+          badges?: Json | null
           bio?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id: string
+          is_verified?: boolean | null
           phone_number?: string | null
           profile_image_url?: string | null
           rating?: number | null
           total_ratings?: number | null
           updated_at?: string | null
+          verification_type?: string | null
         }
         Update: {
           avatar_url?: string | null
+          badges?: Json | null
           bio?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          is_verified?: boolean | null
           phone_number?: string | null
           profile_image_url?: string | null
           rating?: number | null
           total_ratings?: number | null
           updated_at?: string | null
+          verification_type?: string | null
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          booking_id: string | null
+          comment: string | null
+          created_at: string | null
+          helpful_count: number | null
+          id: string
+          rating: number
+          response: string | null
+          response_date: string | null
+          reviewee_id: string
+          reviewer_id: string
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          comment?: string | null
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          rating: number
+          response?: string | null
+          response_date?: string | null
+          reviewee_id: string
+          reviewer_id: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          comment?: string | null
+          created_at?: string | null
+          helpful_count?: number | null
+          id?: string
+          rating?: number
+          response?: string | null
+          response_date?: string | null
+          reviewee_id?: string
+          reviewer_id?: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewee_id_fkey"
+            columns: ["reviewee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      typing_indicators: {
+        Row: {
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_typing: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_typing?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_typing?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "typing_indicators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_follows: {
+        Row: {
+          created_at: string | null
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

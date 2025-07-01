@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, ArrowLeft } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 
 interface MessageThreadProps {
   otherUserId: string;
@@ -23,6 +24,12 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Create conversation ID for typing indicators
+  const conversationId = user && otherUserId ? 
+    `${[user.id, otherUserId].sort().join('_')}` : '';
+  
+  const { typingUsers, setTyping } = useTypingIndicator(conversationId);
+
   useEffect(() => {
     fetchMessages(otherUserId);
   }, [otherUserId]);
@@ -35,6 +42,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
+    setTyping(false); // Stop typing indicator
     const success = await sendMessage(otherUserId, newMessage.trim());
     
     if (success) {
@@ -49,6 +57,22 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewMessage(e.target.value);
+    
+    // Typing indicator logic
+    if (e.target.value.trim()) {
+      setTyping(true);
+      
+      // Stop typing indicator after 3 seconds of no typing
+      setTimeout(() => {
+        setTyping(false);
+      }, 3000);
+    } else {
+      setTyping(false);
     }
   };
 
@@ -79,7 +103,9 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
         
         <div>
           <h3 className="font-semibold text-gray-800">{otherUserName}</h3>
-          <p className="text-sm text-gray-500">Online</p>
+          <p className="text-sm text-gray-500">
+            {typingUsers.length > 0 ? 'Typing...' : 'Online'}
+          </p>
         </div>
       </div>
 
@@ -101,18 +127,43 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
                 }`}
               >
                 <p className="text-sm">{message.content}</p>
-                <p className={`text-xs mt-1 ${
-                  isOwn ? 'text-orange-100' : 'text-gray-500'
-                }`}>
-                  {new Date(message.created_at).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className={`text-xs ${
+                    isOwn ? 'text-orange-100' : 'text-gray-500'
+                  }`}>
+                    {new Date(message.created_at).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  {isOwn && (
+                    <span className={`text-xs ml-2 ${
+                      message.read ? 'text-orange-200' : 'text-orange-100'
+                    }`}>
+                      {message.read ? '✓✓' : '✓'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
+        
+        {/* Typing indicator */}
+        {typingUsers.length > 0 && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 text-gray-800 px-4 py-2 rounded-2xl">
+              <div className="flex items-center space-x-1">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
@@ -121,7 +172,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({
         <div className="flex gap-2">
           <textarea
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
             rows={1}

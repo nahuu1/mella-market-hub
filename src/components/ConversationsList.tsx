@@ -2,6 +2,7 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
+import { VerificationBadge } from './VerificationBadge';
 
 interface ConversationsListProps {
   onSelectConversation: (userId: string, userName: string, userImage?: string) => void;
@@ -73,9 +74,16 @@ export const ConversationsList: React.FC<ConversationsListProps> = ({
                 )}
                 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800 truncate">
-                    {conversation.other_user.full_name}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-gray-800 truncate">
+                      {conversation.other_user.full_name}
+                    </h3>
+                    <VerificationBadge
+                      isVerified={conversation.other_user.is_verified}
+                      badges={conversation.other_user.badges}
+                      size="sm"
+                    />
+                  </div>
                   <p className="text-sm text-gray-500 truncate">
                     {conversation.last_message}
                   </p>

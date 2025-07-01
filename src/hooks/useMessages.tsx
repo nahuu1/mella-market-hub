@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSocialFeed } from './useSocialFeed';
 
 interface Message {
   id: string;
@@ -9,6 +10,8 @@ interface Message {
   receiver_id: string;
   content: string;
   read: boolean;
+  message_type: string;
+  reply_to_message_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -25,11 +28,14 @@ interface ConversationWithProfile extends Conversation {
     id: string;
     full_name: string;
     profile_image_url: string;
+    is_verified: boolean;
+    badges: string[];
   };
 }
 
 export const useMessages = () => {
   const { user } = useAuth();
+  const { createActivity } = useSocialFeed();
   const [conversations, setConversations] = useState<ConversationWithProfile[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,13 +62,19 @@ export const useMessages = () => {
           
           const { data: profile } = await supabase
             .from('profiles')
-            .select('id, full_name, profile_image_url')
+            .select('id, full_name, profile_image_url, is_verified, badges')
             .eq('id', otherUserId)
             .single();
 
           return {
             ...conv,
-            other_user: profile || { id: otherUserId, full_name: 'Unknown User', profile_image_url: '' }
+            other_user: profile || { 
+              id: otherUserId, 
+              full_name: 'Unknown User', 
+              profile_image_url: '',
+              is_verified: false,
+              badges: []
+            }
           };
         })
       );
@@ -91,13 +103,25 @@ export const useMessages = () => {
       }
 
       setMessages(data || []);
+
+      // Mark received messages as read
+      const unreadMessages = (data || []).filter(msg => 
+        msg.receiver_id === user.id && !msg.read
+      );
+      
+      if (unreadMessages.length > 0) {
+        await supabase
+          .from('messages')
+          .update({ read: true })
+          .in('id', unreadMessages.map(msg => msg.id));
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
   };
 
-  const sendMessage = async (receiverId: string, content: string) => {
-    if (!user) return;
+  const sendMessage = async (receiverId: string, content: string, messageType = 'text', replyToId?: string) => {
+    if (!user) return false;
 
     try {
       const { error } = await supabase
@@ -105,13 +129,21 @@ export const useMessages = () => {
         .insert({
           sender_id: user.id,
           receiver_id: receiverId,
-          content
+          content,
+          message_type: messageType,
+          reply_to_message_id: replyToId
         });
 
       if (error) {
         console.error('Error sending message:', error);
         return false;
       }
+
+      // Create social feed activity
+      createActivity('sent_message', {
+        receiver_id: receiverId,
+        preview: content.substring(0, 50) + (content.length > 50 ? '...' : '')
+      }, 'private');
 
       return true;
     } catch (error) {
