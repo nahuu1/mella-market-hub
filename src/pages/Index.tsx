@@ -14,7 +14,7 @@ import { PostModal } from '@/components/PostModal';
 import { Footer } from '@/components/Footer';
 import { useRealTimeAds } from '@/hooks/useRealTimeAds';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { List, MapPin, Plus, Search, Star, Users, Calendar, Briefcase } from 'lucide-react';
+import { List, MapPin, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -46,7 +46,7 @@ const Index = () => {
   const { toast } = useToast();
   const { ads, loading, searchAds } = useRealTimeAds();
   const [selectedCategory, setSelectedCategory] = useLocalStorage('selectedCategory', 'all');
-  const [distanceFilter, setDistanceFilter] = useLocalStorage('distanceFilter', 5);
+  const [distanceFilter, setDistanceFilter] = useLocalStorage('distanceFilter', 5); // Default to 5km max
   const [viewMode, setViewMode] = useLocalStorage('viewMode', 'list');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedPost, setSelectedPost] = useState<Service | null>(null);
@@ -60,8 +60,9 @@ const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdForm, setShowAdForm] = useState(false);
-  const [userLocation, setUserLocation] = useState({ lat: 9.0320, lng: 38.7469 });
+  const [userLocation, setUserLocation] = useState({ lat: 9.0320, lng: 38.7469 }); // Default to Addis Ababa
 
+  // Get user's real-time location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -73,16 +74,18 @@ const Index = () => {
         },
         (error) => {
           console.log('Geolocation error:', error);
+          // Keep default location if geolocation fails
         },
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 300000
+          maximumAge: 300000 // 5 minutes
         }
       );
     }
   }, []);
 
+  // Transform ads data to match Service interface
   const transformAdsToServices = (adsData: any[]): Service[] => {
     return adsData.map(ad => {
       const distance = ad.location_lat && ad.location_lng 
@@ -106,7 +109,7 @@ const Index = () => {
         user_id: ad.user_id,
         profiles: ad.profiles
       };
-    }).filter(service => service.distance <= distanceFilter);
+    }).filter(service => service.distance <= distanceFilter); // Only show posts within distance filter
   };
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -191,6 +194,7 @@ const Index = () => {
       title: "Success!",
       description: "Your post has been shared successfully.",
     });
+    // The real-time subscription will automatically update the ads list
   };
 
   const handleCloseAdForm = () => {
@@ -198,151 +202,49 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       <Navbar onPostAd={handlePostAd} />
       
       {!selectedMessageUser && (
         <>
+          <SearchHero 
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            isWorkerMode={false}
+          />
+          
           <div className="container mx-auto px-4 py-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-purple-400 to-purple-600 rounded-3xl p-6 text-white relative overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold">Discover</h2>
-                  <Search className="w-8 h-8 opacity-80" />
-                </div>
-                <p className="text-purple-100 mb-6">Your next adventure awaits</p>
-                
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Where do you want to go?"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
-                  />
-                  <Search className="absolute right-3 top-3 w-5 h-5 text-white/70" />
-                </div>
-
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-3">Featured Destinations</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3 p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                      <img src="/placeholder.svg" alt="Bali" className="w-12 h-12 rounded-lg object-cover" />
-                      <div>
-                        <p className="font-medium">Bali, Indonesia</p>
-                        <p className="text-sm text-purple-100">Tropical paradise with stunning beaches</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm">4.8 (9.5k reviews)</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            <SearchBar 
+              onSearch={handleSearch}
+              userLocation={userLocation}
+            />
+            
+            {isSearching && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <span className="text-blue-800">
+                    Showing search results ({searchResults.length} found)
+                  </span>
+                  <button
+                    onClick={clearSearch}
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Clear Search
+                  </button>
                 </div>
               </div>
-
-              <div className="bg-gradient-to-br from-blue-400 to-purple-500 rounded-3xl p-6 text-white relative overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold">Plan Your Trip</h2>
-                  <Calendar className="w-8 h-8 opacity-80" />
-                </div>
-                
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 mb-4">
-                  <h3 className="font-semibold mb-2">Bali Adventure</h3>
-                  <p className="text-sm text-blue-100 mb-2">March 15 - March 29, 2024</p>
-                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">7 days</span>
-                </div>
-
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl h-32 mb-4 flex items-center justify-center">
-                  <MapPin className="w-8 h-8 text-white/60" />
-                </div>
-
-                <button
-                  onClick={handlePostAd}
-                  className="w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white py-3 px-4 rounded-xl font-medium hover:bg-white/30 transition-colors"
-                >
-                  Add Activity
-                </button>
-              </div>
-
-              <div className="bg-gradient-to-br from-pink-400 to-orange-400 rounded-3xl p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold">My Trips</h2>
-                  <Briefcase className="w-8 h-8 opacity-80" />
-                </div>
-                <p className="text-pink-100 mb-6">Your travel memories & plans</p>
-
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold">12</div>
-                    <div className="text-sm text-pink-100">Completed</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold">28</div>
-                    <div className="text-sm text-pink-100">Cities</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold">156</div>
-                    <div className="text-sm text-pink-100">Days</div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-                    <h4 className="font-medium mb-1">Current Trip</h4>
-                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-3">
-                      <p className="font-semibold">Bali Adventure</p>
-                      <p className="text-xs text-blue-100">March 15 - March 22, 2024</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs">Trip Progress</span>
-                        <span className="text-xs">Day 3 of 7</span>
-                      </div>
-                      <div className="w-full bg-white/20 rounded-full h-1 mt-1">
-                        <div className="bg-white h-1 rounded-full" style={{ width: '43%' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-              <SearchBar 
-                onSearch={handleSearch}
-                userLocation={userLocation}
-              />
-              
-              {isSearching && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <span className="text-blue-800">
-                      Showing search results ({searchResults.length} found)
-                    </span>
-                    <button
-                      onClick={clearSearch}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Clear Search
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               <div className="lg:col-span-1 space-y-6">
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <CategoryFilter
-                    selectedCategory={selectedCategory}
-                    onCategoryChange={setSelectedCategory}
-                  />
-                </div>
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <DistanceFilter
-                    distanceFilter={distanceFilter}
-                    onDistanceChange={setDistanceFilter}
-                  />
-                </div>
+                <CategoryFilter
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={setSelectedCategory}
+                />
+                <DistanceFilter
+                  distanceFilter={distanceFilter}
+                  onDistanceChange={setDistanceFilter}
+                />
               </div>
 
               <div className="lg:col-span-3">
@@ -355,36 +257,40 @@ const Index = () => {
                   </h2>
                   
                   <div className="flex items-center gap-4">
+                    {/* Post Ad Button */}
                     <button
                       onClick={handlePostAd}
-                      className="bg-gradient-to-r from-orange-400 to-pink-400 text-white px-6 py-3 rounded-xl hover:from-orange-500 hover:to-pink-500 transition-all duration-200 flex items-center gap-2 font-medium shadow-lg"
+                      className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 font-medium"
                     >
                       <Plus size={16} />
                       <span className="hidden sm:inline">Share Post</span>
                     </button>
 
-                    <div className="flex bg-white rounded-xl shadow-lg overflow-hidden border">
+                    {/* View Mode Toggle */}
+                    <div className="flex bg-white rounded-lg shadow-md overflow-hidden">
                       <button
                         onClick={() => setViewMode('list')}
-                        className={`px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
+                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
                           viewMode === 'list'
-                            ? 'bg-gradient-to-r from-orange-400 to-pink-400 text-white'
-                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                         }`}
                       >
                         <List size={20} />
                         <span className="hidden sm:inline">List View</span>
+                        <span className="sm:hidden">List</span>
                       </button>
                       <button
                         onClick={() => setViewMode('map')}
-                        className={`px-4 py-3 text-sm font-medium transition-colors flex items-center gap-2 ${
+                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
                           viewMode === 'map'
-                            ? 'bg-gradient-to-r from-orange-400 to-pink-400 text-white'
-                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                         }`}
                       >
                         <MapPin size={20} />
                         <span className="hidden sm:inline">Map View</span>
+                        <span className="sm:hidden">Map</span>
                       </button>
                     </div>
                   </div>
@@ -406,13 +312,11 @@ const Index = () => {
                         onPostClick={handlePostClick}
                       />
                     ) : (
-                      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                        <MapView
-                          services={filteredServices}
-                          userLocation={userLocation}
-                          distanceFilter={distanceFilter}
-                        />
-                      </div>
+                      <MapView
+                        services={filteredServices}
+                        userLocation={userLocation}
+                        distanceFilter={distanceFilter}
+                      />
                     )}
                   </>
                 )}
