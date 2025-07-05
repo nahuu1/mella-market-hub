@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { User, Star, MapPin, Edit, Plus, Award, Phone, Mail, Home, Camera } from 'lucide-react';
+import { User, Star, MapPin, Edit, Plus, Award, Phone, Mail, Home, Camera, Briefcase, Clock, Check, X, Navigation } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { AdForm } from '@/components/AdForm';
+import { useBookingTracking } from '@/hooks/useBookingTracking';
 
 interface UserProfile {
   id: string;
@@ -16,6 +17,7 @@ interface UserProfile {
   rating: number;
   total_ratings: number;
   profile_image_url: string;
+  user_type: string;
 }
 
 interface UserAd {
@@ -52,6 +54,10 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('ads');
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showAdForm, setShowAdForm] = useState(false);
+  const [isLocationSharing, setIsLocationSharing] = useState(false);
+  
+  // Worker dashboard hooks
+  const { activeBookings, updateBookingStatus } = useBookingTracking();
   
   // User location for Addis Ababa
   const userLocation = { lat: 9.0320, lng: 38.7469 };
@@ -245,6 +251,47 @@ const Profile = () => {
     setShowAdForm(false);
   };
 
+  // Worker dashboard functions
+  const handleAcceptBooking = async (bookingId: string) => {
+    await updateBookingStatus(bookingId, 'accepted');
+    toast({
+      title: "Booking Accepted",
+      description: "You have accepted the booking request.",
+    });
+  };
+
+  const handleRejectBooking = async (bookingId: string) => {
+    await updateBookingStatus(bookingId, 'rejected');
+    toast({
+      title: "Booking Rejected",
+      description: "You have rejected the booking request.",
+    });
+  };
+
+  const handleStartTrip = async (bookingId: string) => {
+    await updateBookingStatus(bookingId, 'en_route', userLocation);
+    setIsLocationSharing(true);
+    toast({
+      title: "Trip Started",
+      description: "Your location is now being shared with the customer.",
+    });
+  };
+
+  const toggleLocationSharing = () => {
+    setIsLocationSharing(!isLocationSharing);
+    if (!isLocationSharing) {
+      toast({
+        title: "Location Sharing Enabled",
+        description: "Your location will be shared with customers during active bookings.",
+      });
+    } else {
+      toast({
+        title: "Location Sharing Disabled",
+        description: "Location sharing has been turned off.",
+      });
+    }
+  };
+
   if (!user) {
     return null;
   }
@@ -259,6 +306,8 @@ const Profile = () => {
       </div>
     );
   }
+
+  const isWorker = profile?.user_type === 'worker';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
@@ -316,9 +365,17 @@ const Profile = () => {
             <div className="flex-1">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                    {profile?.full_name || 'User Name'}
-                  </h1>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-3xl font-bold text-gray-800">
+                      {profile?.full_name || 'User Name'}
+                    </h1>
+                    {isWorker && (
+                      <span className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                        <Briefcase size={14} />
+                        Worker
+                      </span>
+                    )}
+                  </div>
                   
                   <div className="flex items-center gap-4 mb-4">
                     {profile?.rating && profile.rating > 0 ? (
@@ -362,6 +419,29 @@ const Profile = () => {
           </div>
         </div>
 
+        {/* Worker Dashboard Location Control */}
+        {isWorker && (
+          <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">Worker Controls</h2>
+                <p className="text-gray-600">Manage your service availability and location sharing</p>
+              </div>
+              <button
+                onClick={toggleLocationSharing}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  isLocationSharing
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-gray-500 text-white hover:bg-gray-600'
+                }`}
+              >
+                <MapPin size={16} />
+                {isLocationSharing ? 'Location Sharing On' : 'Enable Location Sharing'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="border-b border-gray-200">
@@ -386,6 +466,18 @@ const Profile = () => {
               >
                 Certifications ({certifications.length})
               </button>
+              {isWorker && (
+                <button
+                  onClick={() => setActiveTab('worker-dashboard')}
+                  className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                    activeTab === 'worker-dashboard'
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Worker Dashboard ({activeBookings.length})
+                </button>
+              )}
             </nav>
           </div>
 
@@ -494,6 +586,100 @@ const Profile = () => {
                               )}
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Worker Dashboard Tab */}
+            {isWorker && activeTab === 'worker-dashboard' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">Worker Dashboard</h2>
+                  <span className="text-sm text-gray-500">
+                    {activeBookings.length} active request{activeBookings.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                {activeBookings.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">⏰</div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">No active requests</h3>
+                    <p className="text-gray-600">New service requests will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {activeBookings.map((booking) => (
+                      <div key={booking.id} className="bg-gray-50 rounded-lg p-6 border">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-800 mb-2">{booking.ad.title}</h3>
+                            <div className="space-y-1 text-sm text-gray-600">
+                              <p><strong>Customer:</strong> {booking.customer.full_name}</p>
+                              <p><strong>Service Date:</strong> {booking.service_date ? new Date(booking.service_date).toLocaleDateString() : 'ASAP'}</p>
+                              <p><strong>Amount:</strong> ETB {booking.ad.price.toLocaleString()}</p>
+                              {booking.message && (
+                                <p><strong>Message:</strong> {booking.message}</p>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="ml-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              booking.status === 'accepted' ? 'bg-blue-100 text-blue-800' :
+                              booking.status === 'en_route' ? 'bg-purple-100 text-purple-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {booking.status.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {booking.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleAcceptBooking(booking.id)}
+                                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm flex items-center gap-2"
+                              >
+                                <Check size={16} />
+                                Accept Request
+                              </button>
+                              <button
+                                onClick={() => handleRejectBooking(booking.id)}
+                                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors text-sm flex items-center gap-2"
+                              >
+                                <X size={16} />
+                                Reject Request
+                              </button>
+                            </>
+                          )}
+                          
+                          {booking.status === 'accepted' && (
+                            <button
+                              onClick={() => handleStartTrip(booking.id)}
+                              className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors text-sm flex items-center gap-2"
+                            >
+                              <Navigation size={16} />
+                              Start Service Trip
+                            </button>
+                          )}
+
+                          {booking.status === 'en_route' && (
+                            <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium">
+                              Service in progress - Location being shared
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <p className="text-xs text-gray-500">
+                            Requested: {new Date(booking.created_at).toLocaleString()}
+                          </p>
                         </div>
                       </div>
                     ))}
