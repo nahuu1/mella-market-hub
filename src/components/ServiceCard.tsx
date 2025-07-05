@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Star, MapPin, MessageCircle, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -28,13 +27,15 @@ interface ServiceCardProps {
   onBook?: (service: Service) => void;
   onMessage?: (userId: string, userName: string) => void;
   onUserProfileClick?: (userId: string) => void;
+  onPostClick?: (service: Service) => void;
 }
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({ 
   service, 
   onBook, 
   onMessage, 
-  onUserProfileClick 
+  onUserProfileClick,
+  onPostClick
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -66,10 +67,17 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
     }
   };
 
+  const handlePostClick = () => {
+    onPostClick?.(service);
+  };
+
   const isOwnAd = user?.id === service.user_id;
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+    <div 
+      className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
+      onClick={handlePostClick}
+    >
       <div className="relative">
         <img
           src={service.image}
