@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +19,8 @@ interface BookingWithTracking {
   total_amount?: number;
   emergency_contact?: any;
   created_at: string;
+  service_date?: string;
+  message?: string;
   ad: {
     title: string;
     price: number;
