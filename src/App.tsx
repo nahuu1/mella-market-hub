@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import AddCertification from "./pages/AddCertification";
+import Emergency from "./pages/Emergency";
 import NotFound from "./pages/NotFound";
 import Messages from "./pages/Messages";
 import WorkerDashboard from "./pages/WorkerDashboard";
@@ -30,7 +31,7 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/add-certification" element={<AddCertification />} />
               <Route path="/add-post" element={<Index />} />
-              <Route path="/emergency" element={<Index />} />
+              <Route path="/emergency" element={<Emergency />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/worker-dashboard" element={<WorkerDashboard />} />
               <Route path="*" element={<NotFound />} />
