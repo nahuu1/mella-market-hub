@@ -16,7 +16,7 @@ import { useRealTimeAds } from '@/hooks/useRealTimeAds';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { List, MapPin, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 interface Service {
@@ -43,6 +43,7 @@ interface Service {
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { ads, loading, searchAds } = useRealTimeAds();
   const [selectedCategory, setSelectedCategory] = useLocalStorage('selectedCategory', 'all');
@@ -61,6 +62,15 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdForm, setShowAdForm] = useState(false);
   const [userLocation, setUserLocation] = useState({ lat: 9.0320, lng: 38.7469 }); // Default to Addis Ababa
+
+  // Check if we need to open ad form from navigation state
+  useEffect(() => {
+    if (location.state?.openAdForm) {
+      setShowAdForm(true);
+      // Clear the state to prevent reopening on refresh
+      navigate('/', { replace: true });
+    }
+  }, [location.state, navigate]);
 
   // Get user's real-time location
   useEffect(() => {
