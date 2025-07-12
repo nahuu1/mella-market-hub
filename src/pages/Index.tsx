@@ -212,7 +212,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-orange-50 to-red-50 pb-4">
       <Navbar onPostAd={handlePostAd} />
       
       {!selectedMessageUser && (

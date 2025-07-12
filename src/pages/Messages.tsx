@@ -29,7 +29,7 @@ const Messages = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-green-50 to-emerald-50 pb-4">
       {/* Header */}
       <header className="bg-white shadow-lg border-b-4 border-green-600">
         <div className="container mx-auto px-4">
