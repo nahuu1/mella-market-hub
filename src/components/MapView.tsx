@@ -481,59 +481,8 @@ export const MapView: React.FC<MapViewProps> = ({ services, userLocation: initia
   const nearbyEmergencyLocations = getNearbyEmergencyLocations(currentLocation.lat, currentLocation.lng);
 
   return (
-    <div className="relative">
-      <div className="h-[400px] sm:h-[600px] w-full rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl border-2 sm:border-4 border-white">
-        <div ref={mapContainer} className="h-full w-full" />
-      </div>
-      
-      {/* Enhanced Location Status */}
-      <div className="mt-2 mb-4 text-center">
-        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-          isTracking ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
-        }`}>
-          <div className={`w-3 h-3 rounded-full ${isTracking ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
-          {isTracking ? '📍 Live Location Active' : '📍 Location Fixed'}
-          {locationError && (
-            <span className="text-xs text-red-600 ml-2">({locationError})</span>
-          )}
-        </div>
-      </div>
-      
-      {/* Emergency Stations List */}
-      <div className="mt-4 sm:mt-6 bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-          🆘 Emergency Contacts Near You ({nearbyEmergencyLocations.length} within 5km)
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {nearbyEmergencyLocations.map((location, index) => {
-            const distance = calculateDistance(currentLocation.lat, currentLocation.lng, location.lat, location.lng);
-            return (
-              <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-                <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                  <span className="text-lg sm:text-xl">{location.icon}</span>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{location.name}</h4>
-                    <p className="text-xs sm:text-sm text-gray-600">{location.type}</p>
-                    <p className="text-xs text-gray-500">{distance.toFixed(1)} km away</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleEmergencyCall(location.phone)}
-                  className="w-full bg-red-600 text-white py-2 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base font-medium"
-                >
-                  📞 {location.phone}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        {nearbyEmergencyLocations.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <p>No emergency stations found within 5km of your location.</p>
-            <p className="text-sm mt-2">Please try moving to a different area or check your location settings.</p>
-          </div>
-        )}
-      </div>
+    <div style={{ width: '100%', height: '100%' }}>
+      <div ref={mapContainer} className="h-full w-full" />
     </div>
   );
 };

@@ -346,15 +346,12 @@ export const Emergency: React.FC = () => {
           </div>
 
           {/* Map View */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Live Map</h2>
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ height: '500px' }}>
-              <MapView
-                services={transformStationsForMap()}
-                userLocation={userLocation}
-                distanceFilter={20}
-              />
-            </div>
+          <div className="w-full h-72 my-4 relative z-0">
+            <MapView
+              services={transformStationsForMap()}
+              userLocation={userLocation}
+              distanceFilter={20}
+            />
           </div>
         </div>
       </div>

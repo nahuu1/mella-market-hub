@@ -292,18 +292,6 @@ const Index = () => {
                         <span className="hidden sm:inline">List View</span>
                         <span className="sm:hidden">List</span>
                       </button>
-                      <button
-                        onClick={() => setViewMode('map')}
-                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-                          viewMode === 'map'
-                            ? 'bg-orange-500 text-white'
-                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        <MapPin size={20} />
-                        <span className="hidden sm:inline">Map View</span>
-                        <span className="sm:hidden">Map</span>
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -324,11 +312,7 @@ const Index = () => {
                         onPostClick={handlePostClick}
                       />
                     ) : (
-                      <MapView
-                        services={filteredServices}
-                        userLocation={userLocation}
-                        distanceFilter={distanceFilter}
-                      />
+                      null
                     )}
                   </>
                 )}
