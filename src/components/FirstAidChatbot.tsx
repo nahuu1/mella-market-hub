@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import AmharicVoiceInput from './AmharicVoiceInput';
 
 interface Message {
   id: string;
@@ -20,6 +21,53 @@ interface Message {
 interface FirstAidChatbotProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+// Helper: Get user's current location (returns Promise<{lat, lng} | null>)
+async function getUserLocation() {
+  return new Promise<{ lat: number; lng: number } | null>((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+
+// Helper: Query a free AI medical API for intent recognition and medicine suggestion
+async function getMedicalAdvice(query: string, lang: string) {
+  // Example: Use Medical Chat's public API (demo, for illustration)
+  // Replace with a real free endpoint if available
+  // Here, we use a placeholder fetch to a public demo endpoint
+  try {
+    const response = await fetch(
+      `https://api.medical.chat-data.com/ai/diagnose?question=${encodeURIComponent(query)}&lang=${lang}`
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    // data.answer may contain diagnosis, medicine, or advice
+    return data.answer || null;
+  } catch {
+    return null;
+  }
+}
+
+// Helper: Find closest emergency station using OpenStreetMap Nominatim API
+async function getClosestEmergencyStation(lat: number, lng: number, lang: string) {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=emergency%20hospital%20near%20${lat},${lng}&accept-language=${lang}`
+    );
+    const data = await response.json();
+    if (data && data.length > 0) {
+      const station = data[0];
+      return `Closest emergency station: ${station.display_name}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClose }) => {
@@ -132,7 +180,31 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
       return knowledgeResponse;
     }
 
-    // For other queries, provide general guidance
+    // 1. Try to get medical advice/medicine suggestion from free AI API
+    let aiAdvice = await getMedicalAdvice(userMessage, language);
+    let emergencyInfo = '';
+
+    // 2. If user input seems like an emergency, try to get location and show closest emergency station
+    const emergencyKeywords = ['emergency', 'hospital', 'ambulance', 'bleeding', 'unconscious', 'not breathing', 'heart attack', 'stroke', 'overdose', 'poisoning', 'severe pain'];
+    const lowerMsg = userMessage.toLowerCase();
+    if (emergencyKeywords.some(k => lowerMsg.includes(k))) {
+      const loc = await getUserLocation();
+      if (loc) {
+        const stationInfo = await getClosestEmergencyStation(loc.lat, loc.lng, language);
+        if (stationInfo) emergencyInfo = `\n${stationInfo}`;
+      } else {
+        emergencyInfo = language === 'en'
+          ? '\n(Location not available. Please enable location for local emergency info.)'
+          : '\n(አካባቢ መረጃ አልተገኘም። ለአካባቢያዊ የአደጋ መረጃ እባክዎ አካባቢ ፍቃድ ይስጡ።)';
+      }
+    }
+
+    // 3. Compose the response
+    if (aiAdvice) {
+      return aiAdvice + emergencyInfo;
+    }
+
+    // 4. Fallback to general guidance
     const generalResponses = {
       en: [
         "I can help with basic first aid for cuts, burns, sprains, choking, bleeding, fever, and allergic reactions. Could you be more specific about what you need help with?",
@@ -145,12 +217,11 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
         "ስለ አጠቃላይ የመጀመሪያ እርዳታ ሁኔታዎች መረጃ አለኝ። እነዚህን ይሞክሩ: መቁረጫዎች፣ ቃጠሎዎች፣ መታፈን፣ ደም መፍሰስ፣ መወዘዝ፣ ትኩሳት ወይም የአለርጂ ምርመራዎች።",
       ]
     };
-    
     const randomResponse = generalResponses[language][Math.floor(Math.random() * generalResponses[language].length)];
-    const reminder = language === 'en' 
+    const reminder = language === 'en'
       ? "\n\n⚠️ Remember: For serious emergencies, always call 911 first!"
-      : "\n\n⚠️ ያስታውሱ: ለከባድ አደጋዎች፣ ሁልጊዜ 911 መጀመሪያ ይደውሉ!";
-    return randomResponse + reminder;
+      : "\n\n⚠️ የአደጋ ጊዜ ሲኖር፣ 911 ይደውሉ!";
+    return randomResponse + reminder + emergencyInfo;
   };
   // Handle voice recording
   const startRecording = async () => {
@@ -304,8 +375,22 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <Card className="w-full max-w-md max-h-[85vh] flex flex-col bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <Card
+        className="w-full max-w-md max-h-[90vh] sm:max-h-[85vh] flex flex-col bg-white shadow-2xl rounded-lg"
+        style={{
+          height: '100%',
+          maxHeight: '90vh',
+          width: '100%',
+          maxWidth: '420px',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b bg-red-50">
           <div className="flex items-center gap-2">
             <CardTitle className="flex items-center gap-2 text-lg text-red-700">
@@ -337,8 +422,8 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
           </AlertDescription>
         </Alert>
 
-        <CardContent className="flex-1 p-0 flex flex-col">
-          <ScrollArea className="flex-1 p-4">
+        <CardContent className="flex-1 p-0 flex flex-col min-h-0">
+          <ScrollArea className="flex-1 p-4 min-h-0 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto">
             <div className="space-y-4">
               {messages.map((message) => (
                 <div
@@ -404,15 +489,13 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
-
-          <div className="border-t p-4 bg-gray-50">
+          <div className="border-t p-4 bg-gray-50 sticky bottom-0 left-0 w-full z-10">
             <div className="text-xs text-gray-600 mb-2 text-center">
-              {language === 'en' 
-                ? '💡 Try: "cut on finger", "burn from stove", "sprained ankle"'
-                : '💡 ይሞክሩ: "በጣት ላይ መቁረጥ"፣ "ከምድጃ ቃጠሎ"፣ "የተወዘዘ ቁርጭምጭሚት"'
+              {language === 'en'
+                ? '\ud83d\udca1 Try: "cut on finger", "burn from stove", "sprained ankle"'
+                : '\ud83d\udca1 \u12ed\u121e\u12ad\u1229: "\u1260\u1323\u1275 \u120b\u12ed \u1218\u1241\u1228\u1325"\u1363 "\u12a8\u121d\u12f5\u1303 \u1243\u1320\u120e"\u1363 "\u12e8\u1270\u12c8\u12d8\u12d8 \u1241\u122d\u132d\u121d\u132d\u121a\u1275"'
               }
             </div>
-            
             <div className="flex gap-2 mb-2">
               <input
                 type="file"
@@ -430,7 +513,6 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
               >
                 <Image className="h-4 w-4" />
               </Button>
-              
               <Button
                 variant="outline"
                 size="sm"
@@ -440,6 +522,46 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
               >
                 {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
+              {/* Amharic Voice Input Button */}
+              <AmharicVoiceInput
+                onResult={async (text) => {
+                  // Add the recognized text as a user message and trigger response
+                  const userMessage: Message = {
+                    id: Date.now().toString(),
+                    text,
+                    sender: 'user',
+                    timestamp: new Date(),
+                    type: 'text',
+                  };
+                  setMessages((prev) => [...prev, userMessage as Message]);
+                  setIsLoading(true);
+                  try {
+                    const botResponse = await generateResponse(text);
+                    const botMessage: Message = {
+                      id: (Date.now() + 1).toString(),
+                      text: botResponse,
+                      sender: 'bot',
+                      timestamp: new Date(),
+                      type: 'text',
+                    };
+                    setMessages((prev) => [...prev, botMessage as Message]);
+                  } catch (error) {
+                    const errorText = language === 'en'
+                      ? "\uD83D\uDEA8 I'm having trouble right now. For any medical emergency, please call 911 immediately or contact your local emergency services."
+                      : "\uD83D\uDEA8 \u12A0\u1201\u1295 \u127D\u130D\u122D \u12A5\u12EB\u130B\u1320\u1218\u129D \u1290\u12CD\u1362 \u1208\u121B\u1295\u129B\u12CD\u121D \u12E8\u1215\u12AD\u121D\u1293 \u12A0\u12F0\u130B\u1363 \u12A5\u1263\u12AD\u12CE 911 \u12C8\u12ED\u121D \u12E8\u12A0\u12AB\u1263\u1262\u12CE\u1295 \u12E8\u12A0\u12F0\u130B \u130A\u12DC \u12A0\u1308\u120D\u130D\u120E\u1276\u127D\u1295 \u12C8\u12F2\u12EB\u12CD\u1291 \u12ED\u12F0\u12CD\u1209\u1362";
+                    const errorMessage: Message = {
+                      id: (Date.now() + 1).toString(),
+                      text: errorText,
+                      sender: 'bot',
+                      timestamp: new Date(),
+                      type: 'text',
+                    };
+                    setMessages((prev) => [...prev, errorMessage as Message]);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              />
             </div>
             
             <div className="flex gap-2">
@@ -447,12 +569,13 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={language === 'en' 
-                  ? "Describe your first aid situation..." 
-                  : "የመጀመሪያ እርዳታ ሁኔታዎን ይግለጹ..."
+                placeholder={language === 'en'
+                  ? "Describe your first aid situation..."
+                  : "\u12e8\u1218\u1300\u1218\u122a\u12eb \u12a5\u122d\u12f3\u1273 \u1201\u1294\u1273\u12ce\u1295 \u12ed\u130d\u1208\u1339..."
                 }
                 className="flex-1"
                 disabled={isLoading}
+                style={{ minWidth: 0 }}
               />
               <Button
                 onClick={handleSendMessage}

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, Briefcase, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Tabs } from '@/components/ui/tabs';
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -57,10 +58,12 @@ const Auth = () => {
         const result = await signUp(email, password, fullName);
         error = result.error;
         if (!error) {
-          // Update profile with user type
+          // Update profile with user type only (remove station_category)
           await supabase
             .from('profiles')
-            .update({ user_type: userType })
+            .update({
+              user_type: userType,
+            })
             .eq('email', email);
           
           toast({
@@ -80,9 +83,13 @@ const Auth = () => {
       }
 
       if (error) {
+        let message = error.message;
+        if (error.message.includes('User already registered')) {
+          message = "This email is already registered. Please sign in or use a different email.";
+        }
         toast({
           title: "Error",
-          description: error.message,
+          description: message,
           variant: "destructive",
         });
       }
@@ -96,6 +103,14 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const EMERGENCY_CATEGORIES = [
+    { key: 'hospital', label: 'Hospital' },
+    { key: 'security', label: 'Security' },
+    { key: 'traffic', label: 'Traffic' },
+    { key: 'fire', label: 'Fire Station' },
+  ];
+  const [stationCategory, setStationCategory] = useState(EMERGENCY_CATEGORIES[0].key);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-orange-50 to-yellow-50 flex items-center justify-center p-4 pb-20">
@@ -164,6 +179,23 @@ const Auth = () => {
                 </div>
               </div>
             </>
+          )}
+          {isSignUp && userType === 'worker' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Emergency Station Category
+              </label>
+              <select
+                value={stationCategory}
+                onChange={e => setStationCategory(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                required
+              >
+                {EMERGENCY_CATEGORIES.map(cat => (
+                  <option key={cat.key} value={cat.key}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
           )}
 
           <div>

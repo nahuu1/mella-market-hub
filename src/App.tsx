@@ -16,6 +16,9 @@ import NotFound from "./pages/NotFound";
 import Messages from "./pages/Messages";
 import WorkerDashboard from "./pages/WorkerDashboard";
 import Emergency from "./pages/Emergency";
+import AdminLogin from './pages/AdminLogin';
+import EmergencyAdminPanel from './pages/EmergencyAdminPanel';
+import AdminRegister from './pages/AdminRegister';
 
 const queryClient = new QueryClient();
 
@@ -37,6 +40,9 @@ const App = () => (
                 <Route path="/emergency" element={<Emergency />} />
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/worker-dashboard" element={<WorkerDashboard />} />
+                <Route path="/admin-login" element={<AdminLogin />} />
+                <Route path="/emergency-admin" element={<EmergencyAdminPanel />} />
+                <Route path="/admin-register" element={<AdminRegister />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <BottomNavigation />
