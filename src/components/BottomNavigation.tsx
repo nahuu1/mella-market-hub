@@ -2,37 +2,39 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, AlertTriangle, Plus, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 
 export const BottomNavigation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
 
   const navItems = [
     {
       icon: Home,
-      label: 'Home',
+      label: t('home'),
       path: '/',
       isLink: true,
     },
     {
       icon: AlertTriangle,
-      label: 'Emergency',
+      label: t('emergency'),
       path: '/emergency',
       isLink: true,
     },
     {
       icon: Plus,
-      label: 'Add',
+      label: t('add'),
       path: '/add-post',
       isLink: false,
       action: 'add-post',
     },
     {
       icon: User,
-      label: 'Profile',
+      label: t('profile'),
       path: '/profile',
       isLink: true,
     },
@@ -43,8 +45,8 @@ export const BottomNavigation: React.FC = () => {
   const handleAddPost = () => {
     if (!user) {
       toast({
-        title: "Authentication Required",
-        description: "Please sign in to share a post.",
+        title: t('authRequired'),
+        description: t('signInToShare'),
         variant: "destructive",
       });
       navigate('/auth');

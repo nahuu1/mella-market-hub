@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface EmergencyAssistantProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ export const EmergencyAssistant: React.FC<EmergencyAssistantProps> = ({
   onClose, 
   userLocation 
 }) => {
-  const [language, setLanguage] = useState<'en' | 'am'>('en');
+  const { t, language, setLanguage } = useLanguage();
   const [currentStep, setCurrentStep] = useState(0);
   const [userInputs, setUserInputs] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -109,7 +110,7 @@ export const EmergencyAssistant: React.FC<EmergencyAssistantProps> = ({
           <div className="flex items-center gap-2">
             <CardTitle className="flex items-center gap-2 text-lg text-red-700">
               <AlertTriangle className="h-5 w-5" />
-              {language === 'en' ? '🚨 Emergency Assistant' : '🚨 የአደጋ ጊዜ ረዳት'}
+              🚨 {t('emergencyAssistant')}
             </CardTitle>
             <Button
               variant="ghost"
@@ -128,10 +129,7 @@ export const EmergencyAssistant: React.FC<EmergencyAssistantProps> = ({
         <Alert className="m-4 mb-2 border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-sm font-medium text-red-800">
-            {language === 'en' 
-              ? '🚨 Emergency services have been notified'
-              : '🚨 የአደጋ ጊዜ አገልግሎቶች ማሳወቅ ተደርጓል'
-            }
+            🚨 {t('emergencyNotified')}
           </AlertDescription>
         </Alert>
 

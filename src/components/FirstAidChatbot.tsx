@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User, AlertTriangle, Loader2, Camera, Mic, MicOff, Image, Globe } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,7 +23,7 @@ interface FirstAidChatbotProps {
 }
 
 export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClose }) => {
-  const [language, setLanguage] = useState<'en' | 'am'>('en');
+  const { t, language, setLanguage } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -33,19 +34,18 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
 
   // Initialize welcome message based on language
   useEffect(() => {
-    const welcomeMessages = {
-      en: "🚨 IMPORTANT DISCLAIMER: I am NOT a doctor or medical professional. I can only provide basic first aid guidance. In case of serious emergencies, please call 911 or your local emergency services IMMEDIATELY.\n\nFor minor issues, I can offer general first aid tips. How can I help you today?",
-      am: "🚨 አስፈላጊ ማስታወሻ: እኔ ዶክተር ወይም የሕክምና ባለሙያ አይደለሁም። መሠረታዊ የመጀመሪያ እርዳታ መመሪያ ብቻ ሰጠት ይችላል። በከባድ የአደጋ ጊዜ፣ እባክዎ 911 ወይም የአካባቢዎን የአደጋ ጊዜ አገልግሎቶችን ወዲያውኑ ይደውሉ።\n\nለአነስተኛ ችግሮች፣ መሠረታዊ የመጀመሪያ እርዳታ ምክሮች ሰጥት ይችላል። ዛሬ እንዴት እርዳት ይችላል?"
-    };
+    const welcomeMessage = language === 'en' 
+      ? `🚨 IMPORTANT DISCLAIMER: ${t('disclaimer')} In case of serious emergencies, please call 911 or your local emergency services IMMEDIATELY.\n\nFor minor issues, I can offer general first aid tips. ${t('howCanIHelp')}`
+      : `🚨 አስፈላጊ ማስታወሻ: ${t('disclaimer')} በከባድ የአደጋ ጊዜ፣ እባክዎ 911 ወይም የአካባቢዎን የአደጋ ጊዜ አገልግሎቶችን ወዲያውኑ ይደውሉ።\n\nለአነስተኛ ችግሮች፣ መሠረታዊ የመጀመሪያ እርዳታ ምክሮች ሰጥት ይችላል። ${t('howCanIHelp')}`;
     
     setMessages([{
       id: '1',
-      text: welcomeMessages[language],
+      text: welcomeMessage,
       sender: 'bot',
       timestamp: new Date(),
       type: 'text'
     }]);
-  }, [language]);
+  }, [language, t]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -310,7 +310,7 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
           <div className="flex items-center gap-2">
             <CardTitle className="flex items-center gap-2 text-lg text-red-700">
               <Bot className="h-5 w-5" />
-              {language === 'en' ? '🚨 First Aid Assistant' : '🚨 የመጀመሪያ እርዳታ ረዳት'}
+              🚨 {t('firstAidTitle')}
             </CardTitle>
             <Button
               variant="ghost"

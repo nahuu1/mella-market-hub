@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { ChatbotFloatingButton } from "@/components/ChatbotFloatingButton";
 import Index from "./pages/Index";
@@ -14,33 +15,36 @@ import AddCertification from "./pages/AddCertification";
 import NotFound from "./pages/NotFound";
 import Messages from "./pages/Messages";
 import WorkerDashboard from "./pages/WorkerDashboard";
+import Emergency from "./pages/Emergency";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <div className="min-h-screen pb-16">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/add-certification" element={<AddCertification />} />
-              <Route path="/add-post" element={<Index />} />
-              <Route path="/emergency" element={<Index />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/worker-dashboard" element={<WorkerDashboard />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <BottomNavigation />
-            <ChatbotFloatingButton />
-          </div>
-        </BrowserRouter>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <div className="min-h-screen pb-16">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/add-certification" element={<AddCertification />} />
+                <Route path="/add-post" element={<Index />} />
+                <Route path="/emergency" element={<Emergency />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/worker-dashboard" element={<WorkerDashboard />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <BottomNavigation />
+              <ChatbotFloatingButton />
+            </div>
+          </BrowserRouter>
+        </AuthProvider>
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
