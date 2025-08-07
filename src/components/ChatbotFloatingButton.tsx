@@ -1,14 +1,32 @@
 import React, { useState } from 'react';
-import { MessageCircle, Heart } from 'lucide-react';
+import { MessageCircle, Heart, AlertTriangle } from 'lucide-react';
 import { FirstAidChatbot } from './FirstAidChatbot';
+import { EmergencyAssistant } from './EmergencyAssistant';
 
-export const ChatbotFloatingButton: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+interface ChatbotFloatingButtonProps {
+  showEmergencyAssistant?: boolean;
+  userLocation?: { lat: number; lng: number };
+}
+
+export const ChatbotFloatingButton: React.FC<ChatbotFloatingButtonProps> = ({ 
+  showEmergencyAssistant = false,
+  userLocation 
+}) => {
+  const [isFirstAidOpen, setIsFirstAidOpen] = useState(false);
+  const [isEmergencyOpen, setIsEmergencyOpen] = useState(showEmergencyAssistant);
+
+  // Auto-open emergency assistant if prop is true
+  React.useEffect(() => {
+    if (showEmergencyAssistant) {
+      setIsEmergencyOpen(true);
+    }
+  }, [showEmergencyAssistant]);
 
   return (
     <>
+      {/* Regular First Aid Chatbot Button */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setIsFirstAidOpen(true)}
         className="fixed bottom-20 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full p-4 shadow-lg z-[150] transition-all duration-300 hover:scale-110 pulse-red"
         aria-label="Open First Aid Assistant"
         title="Emergency First Aid Assistant"
@@ -21,7 +39,24 @@ export const ChatbotFloatingButton: React.FC = () => {
         </div>
       </button>
       
-      <FirstAidChatbot isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {/* Emergency Assistant Button (only shows during emergency) */}
+      {showEmergencyAssistant && !isEmergencyOpen && (
+        <button
+          onClick={() => setIsEmergencyOpen(true)}
+          className="fixed bottom-36 right-4 bg-orange-600 hover:bg-orange-700 text-white rounded-full p-4 shadow-lg z-[150] transition-all duration-300 hover:scale-110 animate-pulse"
+          aria-label="Open Emergency Assistant"
+          title="Emergency Report Assistant"
+        >
+          <AlertTriangle className="h-6 w-6" />
+        </button>
+      )}
+      
+      <FirstAidChatbot isOpen={isFirstAidOpen} onClose={() => setIsFirstAidOpen(false)} />
+      <EmergencyAssistant 
+        isOpen={isEmergencyOpen} 
+        onClose={() => setIsEmergencyOpen(false)}
+        userLocation={userLocation}
+      />
     </>
   );
 };
