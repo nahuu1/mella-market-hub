@@ -358,10 +358,10 @@ const Index = () => {
             handleClosePost();
             handleMessageUser(selectedPost.user_id, selectedPost.provider, selectedPost.profiles?.profile_image_url);
           }}
-          onEdit={() => {
+          onEdit={user?.id === selectedPost.user_id ? () => {
             setEditAd(selectedPost);
             handleClosePost();
-          }}
+          } : undefined}
         />
       )}
 
