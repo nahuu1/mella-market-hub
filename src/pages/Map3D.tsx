@@ -32,7 +32,17 @@ const Map3D: React.FC = () => {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
 
-  const [token, setToken] = useState<string>(() => localStorage.getItem('mapbox_token') || '');
+  // Pre-set the token to avoid manual input
+  const defaultToken = 'pk.eyJ1IjoibmFodTEzIiwiYSI6ImNtZThlbWwxbjBiNGEybHM4d3FxeDk5dDUifQ.uWvrvBCPejGkD9vk-7545g';
+  const [token, setToken] = useState<string>(() => {
+    const stored = localStorage.getItem('mapbox_token');
+    if (!stored) {
+      localStorage.setItem('mapbox_token', defaultToken);
+      return defaultToken;
+    }
+    return stored;
+  });
+  
   const [center, setCenter] = useState<[number, number]>(() => [38.7469, 9.032]); // Addis default
 
   // Ask geolocation to center the map (non-blocking)
