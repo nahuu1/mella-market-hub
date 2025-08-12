@@ -30,6 +30,7 @@ interface PostModalProps {
   onBook: () => void;
   onMessage: () => void;
   onCall?: () => void;
+  onEdit?: () => void;
 }
 
 export const PostModal: React.FC<PostModalProps> = ({
@@ -38,7 +39,8 @@ export const PostModal: React.FC<PostModalProps> = ({
   post,
   onBook,
   onMessage,
-  onCall
+  onCall,
+  onEdit,
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -131,7 +133,7 @@ export const PostModal: React.FC<PostModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-4 border-t flex-wrap">
             <button
               onClick={onBook}
               className="flex-1 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition-colors font-medium"
@@ -152,6 +154,14 @@ export const PostModal: React.FC<PostModalProps> = ({
               >
                 <Phone size={18} />
                 Call
+              </button>
+            )}
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="flex items-center justify-center gap-2 bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Edit
               </button>
             )}
           </div>

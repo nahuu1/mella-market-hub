@@ -10,7 +10,7 @@ import { useRealTimeAds } from '@/hooks/useRealTimeAds';
 import { Separator } from '@/components/ui/separator';
 import { useBookingTracking } from '@/hooks/useBookingTracking';
 import { MessageThread } from '@/components/MessageThread';
-import AdminLogin from './pages/AdminLogin';
+
 
 const EMERGENCY_CATEGORIES = [
   { key: 'hospital', label: 'Hospital' },
@@ -101,7 +101,7 @@ const EmergencyAdminPanel: React.FC = () => {
           <TabsList className="mb-6">
             {EMERGENCY_CATEGORIES.map((cat) => (
               <TabsTrigger key={cat.key} value={cat.key} className="capitalize">
-                <span className={`px-2 py-1 rounded ${cat.color}`}>{cat.label}</span>
+                <span className="px-2 py-1 rounded">{cat.label}</span>
               </TabsTrigger>
             ))}
           </TabsList>

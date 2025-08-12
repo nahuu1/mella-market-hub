@@ -9,6 +9,15 @@ interface AdFormProps {
   onClose: () => void;
   userLocation: { lat: number; lng: number };
   onAdAdded: (ad: any) => void;
+  adToEdit?: {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    price: number;
+    image_url?: string | null;
+  };
+  onAdUpdated?: (ad: any) => void;
 }
 
 const serviceCategories = [
@@ -21,18 +30,18 @@ const productCategories = [
   'Musical Instruments', 'Home Appliances', 'Vehicles', 'Tools', 'Other'
 ];
 
-export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded }) => {
+export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded, adToEdit, onAdUpdated }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: serviceCategories[0],
-    price: '',
+    title: adToEdit?.title || '',
+    description: adToEdit?.description || '',
+    category: adToEdit?.category || serviceCategories[0],
+    price: adToEdit ? String(adToEdit.price) : '',
     type: 'service' as 'service' | 'sell' | 'rent'
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imagePreview, setImagePreview] = useState<string>(adToEdit?.image_url || '');
   const [loading, setLoading] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,9 +83,31 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
     setLoading(true);
 
     try {
-      let imageUrl = null;
+      let imageUrl = imagePreview || null;
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
+      }
+
+      if (adToEdit) {
+        const { data, error } = await supabase
+          .from('ads')
+          .update({
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            price: parseFloat(formData.price),
+            image_url: imageUrl,
+          })
+          .eq('id', adToEdit.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        toast({ title: 'Success!', description: 'Your post has been updated.' });
+        onAdUpdated?.(data);
+        onClose();
+        return;
       }
 
       const { data, error } = await supabase
@@ -102,18 +133,18 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
       }
 
       toast({
-        title: "Success!",
+        title: 'Success!',
         description: `Your ${formData.type === 'service' ? 'service' : formData.type === 'sell' ? 'product for sale' : 'rental item'} has been posted successfully.`,
       });
 
       onAdAdded(data);
       onClose();
     } catch (error) {
-      console.error('Error posting ad:', error);
+      console.error('Error posting/updating ad:', error);
       toast({
-        title: "Error",
-        description: "Failed to post your ad. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to save your ad. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -125,6 +156,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
   };
 
   const getFormTitle = () => {
+    if (adToEdit) return 'Edit Post';
     switch (formData.type) {
       case 'service': return 'Post a Service';
       case 'sell': return 'Sell a Product';
@@ -338,7 +370,7 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
               disabled={loading}
               className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Posting...' : `Post ${formData.type === 'service' ? 'Service' : formData.type === 'sell' ? 'for Sale' : 'for Rent'}`}
+              {loading ? (adToEdit ? 'Updating...' : 'Posting...') : (adToEdit ? 'Update Post' : `Post ${formData.type === 'service' ? 'Service' : formData.type === 'sell' ? 'for Sale' : 'for Rent'}`)}
             </button>
           </div>
         </form>

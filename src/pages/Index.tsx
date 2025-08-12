@@ -64,6 +64,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdForm, setShowAdForm] = useState(false);
   const [userLocation, setUserLocation] = useState({ lat: 9.0320, lng: 38.7469 }); // Default to Addis Ababa
+  const [editAd, setEditAd] = useState<Service | null>(null);
 
   // Check if we need to open ad form from navigation state
   useEffect(() => {
@@ -235,13 +236,13 @@ const Index = () => {
               <div className="mb-6">
                 <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <span className="text-blue-800">
-                    Showing search results ({searchResults.length} found)
+                    {t('searchResults')} ({searchResults.length})
                   </span>
                   <button
                     onClick={clearSearch}
                     className="text-blue-600 hover:text-blue-800 font-medium"
                   >
-                    Clear Search
+                    {t('clearSearch')}
                   </button>
                 </div>
               </div>
@@ -259,47 +260,56 @@ const Index = () => {
                 />
               </div>
 
-              <div className="lg:col-span-3">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">
-                    {isSearching ? 'Search Results' : 'Community Posts'}
-                    <span className="text-lg font-normal text-gray-600 ml-2">
-                      ({filteredServices.length} posts within {distanceFilter}km)
-                    </span>
-                  </h2>
-                  
-                  <div className="flex items-center gap-4">
-                    {/* Post Ad Button */}
-                    <button
-                      onClick={handlePostAd}
-                      className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 font-medium"
-                    >
-                      <Plus size={16} />
-                      <span className="hidden sm:inline">Share Post</span>
-                    </button>
-
-                    {/* View Mode Toggle */}
-                    <div className="flex bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="lg:col-span-3">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">
+                      {isSearching ? t('searchResults') : t('communityPosts')}
+                      <span className="text-lg font-normal text-gray-600 ml-2">
+                        ({filteredServices.length} {t('postsWithinDistance')} {distanceFilter}{t('kilometers')})
+                      </span>
+                    </h2>
+                    
+                    <div className="flex items-center gap-4">
+                      {/* Post Ad Button */}
                       <button
-                        onClick={() => setViewMode('list')}
-                        className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
-                          viewMode === 'list'
-                            ? 'bg-orange-500 text-white'
-                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                        }`}
+                        onClick={handlePostAd}
+                        className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 font-medium"
                       >
-                        <List size={20} />
-                        <span className="hidden sm:inline">List View</span>
-                        <span className="sm:hidden">List</span>
+                        <Plus size={16} />
+                        <span className="hidden sm:inline">{t('sharePost')}</span>
                       </button>
+
+                      {/* 3D Map Button */}
+                      <button
+                        onClick={() => navigate('/map3d')}
+                        className="bg-white text-gray-700 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2 font-medium"
+                      >
+                        <MapPin size={16} />
+                        <span className="hidden sm:inline">{t('map3D') || '3D Map'}</span>
+                      </button>
+
+                      {/* View Mode Toggle */}
+                      <div className="flex bg-white rounded-lg shadow-md overflow-hidden">
+                        <button
+                          onClick={() => setViewMode('list')}
+                          className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2 ${
+                            viewMode === 'list'
+                              ? 'bg-orange-500 text-white'
+                              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <List size={20} />
+                          <span className="hidden sm:inline">{t('listView')}</span>
+                          <span className="sm:hidden">{t('listView')}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading community posts...</p>
+                    <p className="mt-4 text-gray-600">{t('loadingPosts')}</p>
                   </div>
                 ) : (
                   <>
@@ -348,6 +358,10 @@ const Index = () => {
             handleClosePost();
             handleMessageUser(selectedPost.user_id, selectedPost.provider, selectedPost.profiles?.profile_image_url);
           }}
+          onEdit={() => {
+            setEditAd(selectedPost);
+            handleClosePost();
+          }}
         />
       )}
 
@@ -372,6 +386,26 @@ const Index = () => {
           onClose={handleCloseAdForm}
           userLocation={userLocation}
           onAdAdded={handleAdAdded}
+        />
+      )}
+
+      {editAd && (
+        <AdForm
+          onClose={() => setEditAd(null)}
+          userLocation={userLocation}
+          onAdAdded={() => {}}
+          adToEdit={{
+            id: editAd.id,
+            title: editAd.title,
+            description: editAd.description,
+            category: editAd.category,
+            price: editAd.price,
+            image_url: editAd.image,
+          }}
+          onAdUpdated={() => {
+            setEditAd(null);
+            toast({ title: 'Success!', description: 'Post updated successfully.' });
+          }}
         />
       )}
 
