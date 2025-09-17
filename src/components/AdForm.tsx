@@ -57,12 +57,15 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
-    
+    const fileName = `${Date.now()}.${fileExt}`;
+    // Use existing 'avatars' bucket with RLS requiring userId prefix
+    const objectPath = `${user.id}/ads/${fileName}`;
+
     const { error: uploadError } = await supabase.storage
-      .from('ad-images')
-      .upload(fileName, file);
+      .from('avatars')
+      .upload(objectPath, file);
 
     if (uploadError) {
       console.error('Error uploading image:', uploadError);
@@ -70,8 +73,8 @@ export const AdForm: React.FC<AdFormProps> = ({ onClose, userLocation, onAdAdded
     }
 
     const { data } = supabase.storage
-      .from('ad-images')
-      .getPublicUrl(fileName);
+      .from('avatars')
+      .getPublicUrl(objectPath);
 
     return data.publicUrl;
   };

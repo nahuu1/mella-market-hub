@@ -41,7 +41,8 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ profile, onClose, onPr
         
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const filePath = `profile-images/${fileName}`;
+        // Must prefix with user.id to satisfy RLS policies on avatars bucket
+        const filePath = `${user.id}/profile-images/${fileName}`;
 
         console.log('Uploading file to path:', filePath);
 

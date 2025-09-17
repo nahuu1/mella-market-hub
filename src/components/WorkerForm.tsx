@@ -53,12 +53,12 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
       let imageUrl = '';
 
       // Upload image to Supabase storage if provided
-      if (formData.image) {
+      if (formData.image && user) {
         const fileName = `ad-${Date.now()}-${formData.image.name}`;
-        
+        const objectPath = `${user.id}/ads/${fileName}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(`ads/${fileName}`, formData.image);
+          .upload(objectPath, formData.image);
 
         if (uploadError) {
           console.error('Image upload error:', uploadError);
@@ -70,7 +70,7 @@ export const WorkerForm: React.FC<WorkerFormProps> = ({ onClose, userLocation, o
         } else {
           const { data: { publicUrl } } = supabase.storage
             .from('avatars')
-            .getPublicUrl(`ads/${fileName}`);
+            .getPublicUrl(objectPath);
           imageUrl = publicUrl;
         }
       }
