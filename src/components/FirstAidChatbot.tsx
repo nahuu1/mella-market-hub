@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, AlertTriangle, Loader2, Camera, Mic, MicOff, Image, Globe } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, AlertTriangle, Loader2, Camera, Mic, MicOff, Image, Globe, Phone } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,9 +13,14 @@ interface Message {
   text: string;
   sender: 'user' | 'bot';
   timestamp: Date;
-  type?: 'text' | 'image' | 'audio';
+  type?: 'text' | 'image' | 'audio' | 'station';
   imageUrl?: string;
   audioUrl?: string;
+  // For station-type messages
+  stationName?: string;
+  stationPhone?: string;
+  stationDistanceKm?: number;
+  stationType?: 'hospital' | 'police' | 'fire' | 'ambulance';
 }
 
 interface FirstAidChatbotProps {
@@ -37,17 +42,61 @@ async function getUserLocation() {
 
 // Helper: Query a free AI medical API for intent recognition and medicine suggestion
 async function getMedicalAdvice(query: string, lang: string) {
-  // Example: Use Medical Chat's public API (demo, for illustration)
-  // Replace with a real free endpoint if available
-  // Here, we use a placeholder fetch to a public demo endpoint
+  // Use Wikipedia (no key, no signup) to fetch concise first-aid info
+  // 1) Try in selected language (e.g., 'am'), 2) fallback to English
   try {
-    const response = await fetch(
-      `https://api.medical.chat-data.com/ai/diagnose?question=${encodeURIComponent(query)}&lang=${lang}`
-    );
-    if (!response.ok) return null;
-    const data = await response.json();
-    // data.answer may contain diagnosis, medicine, or advice
-    return data.answer || null;
+    const languages = lang === 'am' ? ['am', 'en'] : ['en'];
+
+    // Light normalization + topic hints to improve search relevance
+    const lower = query.trim().toLowerCase();
+    let searchTerm = lower;
+    const hints: Array<{ keys: string[]; am?: string; en: string }> = [
+      { keys: ['cut', 'laceration', 'wound'], am: 'መቁረጥ', en: 'Laceration' },
+      { keys: ['burn', 'scald'], am: 'ቃጠል', en: 'Burn' },
+      { keys: ['choke', 'choking', 'heimlich'], am: 'መታፈን', en: 'Choking' },
+      { keys: ['bleeding', 'blood loss', 'hemorrhage'], am: 'ደም መፍሰስ', en: 'Bleeding' },
+      { keys: ['sprain', 'ankle', 'twist'], am: 'መወዘዝ', en: 'Sprain' },
+      { keys: ['fever', 'temperature'], am: 'ትኩሳት', en: 'Fever' },
+      { keys: ['allergy', 'allergic', 'anaphylaxis', 'epipen'], am: 'አለርጂ', en: 'Allergy' },
+      { keys: ['seizure', 'epilepsy', 'convulsion'], am: 'ንዕስ በሽታ', en: 'Seizure' },
+      { keys: ['stroke', 'cva'], am: 'ድንጋጤ የአንጎል ችግር', en: 'Stroke' },
+      { keys: ['heart attack', 'chest pain', 'myocardial infarction'], am: 'የልብ ጥቃት', en: 'Myocardial infarction' }
+    ];
+
+    for (const h of hints) {
+      if (h.keys.some(k => lower.includes(k))) {
+        searchTerm = (lang === 'am' && h.am) ? h.am : h.en;
+        break;
+      }
+    }
+
+    for (const l of languages) {
+      // 1) Search best matching page title
+      const searchUrl = `https://${l}.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(searchTerm)}&limit=1&namespace=0&format=json&origin=*`;
+      const sRes = await fetch(searchUrl);
+      if (!sRes.ok) continue;
+      const sData: any = await sRes.json();
+      const title: string | undefined = sData?.[1]?.[0];
+      if (!title) continue;
+
+      // 2) Get summary/extract for that title
+      const summaryUrl = `https://${l}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+      const sumRes = await fetch(summaryUrl);
+      if (!sumRes.ok) continue;
+      const sumData: any = await sumRes.json();
+      const extract: string | undefined = sumData?.extract;
+
+      if (extract) {
+        const header = l === 'am' ? 'የመጀመሪያ እርዳታ መረጃ (ከዊኪፔዲያ):' : 'First aid info (from Wikipedia):';
+        const disclaimer = l === 'am'
+          ? '\n\n⚠️ ማስታወሻ: ይህ መረጃ አጠቃላይ መመሪያ ብቻ ነው፣ ለከባድ አደጋ 991 ይደውሉ።'
+          : '\n\n⚠️ Disclaimer: This is general guidance only; for serious emergencies call 991 immediately.';
+        const source = l === 'am' ? '\n\nምንጭ: Wikipedia' : '\n\nSource: Wikipedia';
+        return `${header}\n${extract}${disclaimer}${source}`;
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -70,6 +119,84 @@ async function getClosestEmergencyStation(lat: number, lng: number, lang: string
   }
 }
 
+// Helper: Haversine distance in km
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Helper: Use the same mock stations as Emergency page and pick nearest
+function findNearestMockStation(userLat: number, userLng: number, lang: string) {
+  const stations = [
+    {
+      id: '1',
+      name: lang === 'am' ? 'ጠቅላላ ሆስፒታል' : 'General Hospital',
+      type: 'hospital' as const,
+      location: { lat: userLat + 0.02, lng: userLng + 0.01 },
+      phone: '+251-11-123-4567',
+    },
+    {
+      id: '2',
+      name: lang === 'am' ? 'ማዕከላዊ ፖሊስ ጣቢያ' : 'Central Police Station',
+      type: 'police' as const,
+      location: { lat: userLat - 0.015, lng: userLng + 0.025 },
+      phone: '+251-11-765-4321',
+    },
+    {
+      id: '3',
+      name: lang === 'am' ? 'የእሳት አደጋ መከላከያ ጣቢያ' : 'Fire Department Station',
+      type: 'fire' as const,
+      location: { lat: userLat + 0.01, lng: userLng - 0.02 },
+      phone: '+251-11-987-6543',
+    },
+    {
+      id: '4',
+      name: lang === 'am' ? 'የአደጋ ጊዜ ህክምና ማዕከል' : 'Emergency Medical Center',
+      type: 'ambulance' as const,
+      location: { lat: userLat - 0.008, lng: userLng - 0.015 },
+      phone: '+251-11-456-7890',
+    },
+    {
+      id: '5',
+      name: lang === 'am' ? 'የልብ ህክምና ሆስፒታል' : 'Cardiac Emergency Hospital',
+      type: 'hospital' as const,
+      location: { lat: userLat + 0.025, lng: userLng - 0.008 },
+      phone: '+251-11-234-5678',
+    },
+  ];
+
+  let best = null as null | {
+    name: string;
+    type: 'hospital' | 'police' | 'fire' | 'ambulance';
+    phone: string;
+    distanceKm: number;
+  };
+  for (const s of stations) {
+    const d = haversineKm(userLat, userLng, s.location.lat, s.location.lng);
+    if (!best || d < best.distanceKm) {
+      best = { name: s.name, type: s.type, phone: s.phone, distanceKm: d };
+    }
+  }
+  return best;
+}
+
+const EMERGENCY_KEYWORDS = ['emergency', 'hospital', 'ambulance', 'bleeding', 'unconscious', 'not breathing', 'heart attack', 'stroke', 'overdose', 'poisoning', 'severe pain'];
+
+// Helper: detect if a response string is the fallback guidance
+function isFallbackResponseText(response: string, lang: string) {
+  if (lang === 'en') {
+    return response.includes("I couldn't match your request precisely.");
+  }
+  // amharic snippet start
+  return response.includes('ጥያቄዎን በትክክል ማስማት አልቻልኩም');
+}
+
 export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClose }) => {
   const { t, language, setLanguage } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -83,8 +210,8 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
   // Initialize welcome message based on language
   useEffect(() => {
     const welcomeMessage = language === 'en' 
-      ? `🚨 IMPORTANT DISCLAIMER: ${t('disclaimer')} In case of serious emergencies, please call 911 or your local emergency services IMMEDIATELY.\n\nFor minor issues, I can offer general first aid tips. ${t('howCanIHelp')}`
-      : `🚨 አስፈላጊ ማስታወሻ: ${t('disclaimer')} በከባድ የአደጋ ጊዜ፣ እባክዎ 911 ወይም የአካባቢዎን የአደጋ ጊዜ አገልግሎቶችን ወዲያውኑ ይደውሉ።\n\nለአነስተኛ ችግሮች፣ መሠረታዊ የመጀመሪያ እርዳታ ምክሮች ሰጥት ይችላል። ${t('howCanIHelp')}`;
+      ? `🚨 IMPORTANT DISCLAIMER: ${t('disclaimer')} In case of serious emergencies, please call 991 or your local emergency services IMMEDIATELY.\n\nFor minor issues, I can offer general first aid tips. ${t('howCanIHelp')}`
+      : `🚨 አስፈላጊ ማስታወሻ: ${t('disclaimer')} በከባድ የአደጋ ጊዜ፣ እባክዎ 991 ወይም የአካባቢዎን የአደጋ ጊዜ አገልግሎቶችን ወዲያውኑ ይደውሉ።\n\nለአነስተኛ ችግሮች፣ መሠረታዊ የመጀመሪያ እርዳታ ምክሮች ሰጥት ይችላል። ${t('howCanIHelp')}`;
     
     setMessages([{
       id: '1',
@@ -185,9 +312,8 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
     let emergencyInfo = '';
 
     // 2. If user input seems like an emergency, try to get location and show closest emergency station
-    const emergencyKeywords = ['emergency', 'hospital', 'ambulance', 'bleeding', 'unconscious', 'not breathing', 'heart attack', 'stroke', 'overdose', 'poisoning', 'severe pain'];
     const lowerMsg = userMessage.toLowerCase();
-    if (emergencyKeywords.some(k => lowerMsg.includes(k))) {
+    if (EMERGENCY_KEYWORDS.some(k => lowerMsg.includes(k))) {
       const loc = await getUserLocation();
       if (loc) {
         const stationInfo = await getClosestEmergencyStation(loc.lat, loc.lng, language);
@@ -207,24 +333,17 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
     // 4. Fallback to general guidance
     const generalResponses = {
       en: [
-        "I can help with basic first aid for cuts, burns, sprains, choking, bleeding, fever, and allergic reactions. Could you be more specific about what you need help with?",
-        "For the best first aid guidance, please tell me specifically what happened - for example: 'cut on finger', 'burn from stove', 'sprained ankle', etc.",
-        "I have information about common first aid situations. Try asking about: cuts, burns, choking, bleeding, sprains, fever, or allergic reactions.",
+        "I couldn't match your request precisely. Try asking about: cuts, burns, choking, bleeding, sprains, fever, or allergic reactions.\n\nI'll also show the nearest emergency service below so you can call right away.\n\n⚠️ Remember: For serious emergencies, always call 991 first!",
       ],
       am: [
-        "ለመቁረጫዎች፣ ቃጠሎዎች፣ መወዘዝ፣ መታፈን፣ ደም መፍሰስ፣ ትኩሳት እና የአለርጂ ምርመራዎች መሠረታዊ የመጀመሪያ እርዳታ ሰጠት ይችላል። ስለሚፈልጉት ነገር የበለጠ ልዩ ሊሆኑ ይችላሉ?",
-        "ለተሻለ የመጀመሪያ እርዳታ መመሪያ፣ እባክዎ የተከሰተውን ነገር በተለይ ይንገሩኝ - ለምሳሌ: 'በጣት ላይ መቁረጥ'፣ 'ከምድጃ ቃጠሎ'፣ 'የተወዘዘ ቁርጭምጭሚት' ወዘተ።",
-        "ስለ አጠቃላይ የመጀመሪያ እርዳታ ሁኔታዎች መረጃ አለኝ። እነዚህን ይሞክሩ: መቁረጫዎች፣ ቃጠሎዎች፣ መታፈን፣ ደም መፍሰስ፣ መወዘዝ፣ ትኩሳት ወይም የአለርጂ ምርመራዎች።",
+        "ጥያቄዎን በትክክል ማስማት አልቻልኩም። ይህን ይሞክሩ: መቁረጫ፣ ቃጠል፣ መታፈን፣ ደም መፍሰስ፣ መወዘዝ፣ ትኩሳት ወይም የአለርጂ ምላሽ።\n\nበታች በቅርብ የሚገኝ የአደጋ አገልግሎትን አሳይላችሁ በቀጥታ እንዲደውሉ።\n\n⚠️ ከባድ አደጋ ሲኖር አስቀድሞ 991 ይደውሉ!",
       ]
     };
-    const randomResponse = generalResponses[language][Math.floor(Math.random() * generalResponses[language].length)];
-    const reminder = language === 'en'
-      ? "\n\n⚠️ Remember: For serious emergencies, always call 911 first!"
-      : "\n\n⚠️ የአደጋ ጊዜ ሲኖር፣ 911 ይደውሉ!";
-    return randomResponse + reminder + emergencyInfo;
+    const fallbackResponse = generalResponses[language][0];
+    return fallbackResponse + emergencyInfo;
   };
-  // Handle voice recording
-  const startRecording = async () => {
+
+  const handleVoiceRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -346,11 +465,37 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
       };
 
       setMessages(prev => [...prev, botMessage]);
+
+      // After sending main response, append nearest station card if emergency intent detected
+      const lowerMsg = currentInput.toLowerCase();
+      const shouldAppendStation = EMERGENCY_KEYWORDS.some(k => lowerMsg.includes(k)) || isFallbackResponseText(botResponse, language);
+      if (shouldAppendStation) {
+        const loc = await getUserLocation();
+        const fallbackLoc = { lat: 9.0320, lng: 38.7469 };
+        const coords = loc ?? fallbackLoc;
+        const nearest = findNearestMockStation(coords.lat, coords.lng, language);
+        if (nearest) {
+          const stationMessage: Message = {
+            id: (Date.now() + 2).toString(),
+            text: language === 'en'
+              ? `Nearest emergency service: ${nearest.name} (~${nearest.distanceKm.toFixed(1)} km). Tap to call.`
+              : `በቅርብ የሚገኝ የአደጋ አገልግሎት፡ ${nearest.name} (~${nearest.distanceKm.toFixed(1)} ኪሜ)። ለመደወል ንካ።`,
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'station',
+            stationName: nearest.name,
+            stationPhone: nearest.phone,
+            stationDistanceKm: nearest.distanceKm,
+            stationType: nearest.type,
+          };
+          setMessages(prev => [...prev, stationMessage]);
+        }
+      }
     } catch (error) {
       console.error('Error generating response:', error);
       const errorText = language === 'en' 
-        ? "🚨 I'm having trouble right now. For any medical emergency, please call 911 immediately or contact your local emergency services."
-        : "🚨 አሁን ችግር እያጋጠመኝ ነው። ለማንኛውም የሕክምና አደጋ፣ እባክዎ 911 ወይም የአካባቢዎን የአደጋ ጊዜ አገልግሎቶችን ወዲያውኑ ይደውሉ።";
+        ? "🚨 I'm having trouble right now. For any medical emergency, please call 991 immediately or contact your local emergency services."
+        : "🚨 አሁን ችግር እያጋጠመኝ ነው። ለማንኛውም የሕክምና አደጋ፣ እባክዎ 991 ወይም የአካባቢዎን የአደጋ ጊዜ አገልግሎቶችን ወዲያውኑ ይደውሉ።";
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -425,7 +570,7 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
         <CardContent className="flex-1 p-0 flex flex-col min-h-0">
           <ScrollArea className="flex-1 p-4 min-h-0 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto">
             <div className="space-y-4">
-              {messages.map((message) => (
+                  {messages.map((message) => (
                 <div
                   key={message.id}
                   className={`flex gap-3 ${
@@ -460,7 +605,44 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
                         </audio>
                       </div>
                     )}
-                    <div className="whitespace-pre-wrap">{message.text}</div>
+                    {/* Station card rendering */}
+                    {message.type === 'station' ? (
+                      <div>
+                        <div className="font-medium mb-1">
+                          {language === 'en' ? 'Nearest emergency service' : 'በቅርብ የሚገኝ የአደጋ አገልግሎት'}
+                        </div>
+                        <div className="text-sm mb-2">
+                          {message.stationName} {message.stationDistanceKm !== undefined && (
+                            <span className="text-gray-600">(~{message.stationDistanceKm.toFixed(1)} km)</span>
+                          )}
+                        </div>
+                        {message.stationPhone && (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`tel:${message.stationPhone}`}
+                              className="text-blue-600 underline"
+                            >
+                              {message.stationPhone}
+                            </a>
+                            <Button
+                              size="sm"
+                              className="bg-red-600 hover:bg-red-700 text-white h-7 px-2"
+                              onClick={() => window.open(`tel:${message.stationPhone}`)}
+                            >
+                              <Phone className="h-3 w-3 mr-1" />
+                              {language === 'en' ? 'Call' : 'ይደውሉ'}
+                            </Button>
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-600 mt-2">
+                          {language === 'en'
+                            ? 'This is a simulated station from the Emergency page.'
+                            : 'ይህ ከአስቸኳይ ገፅ የተለመደ ጣቢያ ማሳያ ነው።'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="whitespace-pre-wrap">{message.text}</div>
+                    )}
                     <div
                       className={`text-xs mt-1 ${
                         message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
@@ -516,7 +698,7 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
               <Button
                 variant="outline"
                 size="sm"
-                onClick={isRecording ? stopRecording : startRecording}
+                onClick={isRecording ? stopRecording : handleVoiceRecording}
                 disabled={isLoading}
                 className={`text-red-600 border-red-200 hover:bg-red-50 ${isRecording ? 'bg-red-100' : ''}`}
               >
@@ -545,6 +727,32 @@ export const FirstAidChatbot: React.FC<FirstAidChatbotProps> = ({ isOpen, onClos
                       type: 'text',
                     };
                     setMessages((prev) => [...prev, botMessage as Message]);
+
+                    // Append nearest station card if emergency intent detected or fallback response used
+                    const lowerMsg = text.toLowerCase();
+                    const shouldAppendStation = EMERGENCY_KEYWORDS.some(k => lowerMsg.includes(k)) || isFallbackResponseText(botResponse, language);
+                    if (shouldAppendStation) {
+                      const loc = await getUserLocation();
+                      const fallbackLoc = { lat: 9.0320, lng: 38.7469 };
+                      const coords = loc ?? fallbackLoc;
+                      const nearest = findNearestMockStation(coords.lat, coords.lng, language);
+                      if (nearest) {
+                        const stationMessage: Message = {
+                          id: (Date.now() + 2).toString(),
+                          text: language === 'en'
+                            ? `Nearest emergency service: ${nearest.name} (~${nearest.distanceKm.toFixed(1)} km). Tap to call.`
+                            : `በቅርብ የሚገኝ የአደጋ አገልግሎት፡ ${nearest.name} (~${nearest.distanceKm.toFixed(1)} ኪሜ)። ለመደወል ንካ።`,
+                          sender: 'bot',
+                          timestamp: new Date(),
+                          type: 'station',
+                          stationName: nearest.name,
+                          stationPhone: nearest.phone,
+                          stationDistanceKm: nearest.distanceKm,
+                          stationType: nearest.type,
+                        };
+                        setMessages((prev) => [...prev, stationMessage as Message]);
+                      }
+                    }
                   } catch (error) {
                     const errorText = language === 'en'
                       ? "\uD83D\uDEA8 I'm having trouble right now. For any medical emergency, please call 911 immediately or contact your local emergency services."
