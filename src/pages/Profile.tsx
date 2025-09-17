@@ -152,10 +152,12 @@ const Profile = () => {
 
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
-      const filePath = `profile-images/${fileName}`;
+      // Prefix with user id to satisfy avatars bucket RLS policies
+      const filePath = `${user?.id}/profile-images/${fileName}`;
 
       console.log('Uploading profile image to path:', filePath);
 
+      // Upload to the 'avatars' bucket (created by migration). Do not fallback to non-existent buckets
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, { 
@@ -164,13 +166,17 @@ const Profile = () => {
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        // Surface helpful message when bucket missing
+        if ((uploadError as any)?.message?.includes('Bucket not found')) {
+          throw new Error("Storage bucket 'avatars' not found. Run the Supabase migrations to create it.");
+        }
         throw uploadError;
       }
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
+      const publicUrl = urlData.publicUrl;
 
       const { error: updateError } = await supabase
         .from('profiles')
@@ -197,7 +203,7 @@ const Profile = () => {
       console.error('Error uploading image:', error);
       toast({
         title: "Error",
-        description: "Failed to upload profile image. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload profile image. Please try again.",
         variant: "destructive",
       });
     } finally {
